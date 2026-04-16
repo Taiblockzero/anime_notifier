@@ -21,7 +21,6 @@ int main(int argc, char *argv[])
 
     QObject::connect(reply, &QNetworkReply::finished, [&]() {
         if (reply->error() == QNetworkReply::NoError) {
-
             QByteArray response = reply->readAll();
 
             // Parse JSON
@@ -31,15 +30,12 @@ int main(int argc, char *argv[])
             QJsonArray dataArr = jsonObj["data"].toArray();
             QJsonObject firstObj = dataArr[0].toObject();
             qDebug() << "MAL ID:" << firstObj["mal_id"].toInt();
-
-
         } else {
             qDebug() << "Error:" << reply->errorString();
         }
 
         reply->deleteLater();
 
-        // 🔥 IMPORTANT: quit the app after response
         QCoreApplication::quit();
     });
 

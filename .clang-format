@@ -1,0 +1,5 @@
+BasedOnStyle: LLVM
+MaxEmptyLinesToKeep: 1
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
