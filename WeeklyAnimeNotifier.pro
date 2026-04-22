@@ -1,4 +1,4 @@
-QT = core network
+QT = core network testlib
 
 CONFIG += c++17 cmdline
 
