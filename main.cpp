@@ -15,8 +15,11 @@ int main(int argc, char *argv[]) {
     QNetworkAccessManager manager;
 
     int64_t malId = 0;
+    QNetworkReply *replyInfo = nullptr;
+
     {
-        QUrl urlSearch("https://api.jikan.moe/v4/anime?q=youjo%20senki");
+        // QUrl urlSearch("https://api.jikan.moe/v4/anime?q=youjo%20senki");
+        QUrl urlSearch("https://api.jikan.moe/v4/anime?q=re%20zero%20season%204");
         QNetworkRequest requestSearch(urlSearch);
 
         QNetworkReply *replySearch = manager.get(requestSearch);
@@ -45,21 +48,19 @@ int main(int argc, char *argv[]) {
                 std::string urlInfoStr{"https://api.jikan.moe/v4/anime/" + std::to_string(malId)};
                 QUrl urlInfo(urlInfoStr.c_str());
                 QNetworkRequest requestInfo(urlInfo);
-
-                QNetworkReply *replyInfo = manager.get(requestInfo);
+                replyInfo = manager.get(requestInfo);
 
                 QObject::connect(replyInfo, &QNetworkReply::finished, [&]() {
-                    qDebug() << "Second request finished";
                     if (replyInfo->error() == QNetworkReply::NoError) {
-                        qDebug() << "Second request success";
                         QByteArray response = replyInfo->readAll();
 
                         // Parse JSON
                         QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
                         QJsonObject jsonObj = jsonDoc.object();
 
-                        qDebug() << "JSON parsed, airing:" << jsonObj["airing"].toBool();
-                        bool airing = jsonObj["airing"].toBool();
+                        QJsonObject dataObj = jsonObj["data"].toObject();
+                        qDebug() << "Airing:" << dataObj["airing"].toBool();
+                        bool airing = dataObj["airing"].toBool();
                         if (!airing) {
                             qDebug() << "Anime not currently airing! Exiting...";
                             replyInfo->deleteLater();
@@ -67,8 +68,7 @@ int main(int argc, char *argv[]) {
                             return;
                         }
 
-                        QJsonObject broadcastObj{jsonObj["broadcast"].toObject()};
-                        qDebug() << "Broadcast object keys:" << broadcastObj.keys();
+                        QJsonObject broadcastObj{dataObj["broadcast"].toObject()};
                         qDebug() << "Time: " << broadcastObj["time"].toString();
                         qDebug() << "Timezone: " << broadcastObj["timezone"].toString();
                     } else {
