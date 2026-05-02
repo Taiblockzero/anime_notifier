@@ -40,11 +40,14 @@ int main(int argc, char *argv[]) {
                 }
                 qDebug() << "MAL ID:" << malId;
 
-                // Use anime id from search request to get anime info with broadcast info
-                // if (!malId)
-                // {
+                if (!malId) {
+                    qDebug() << "MAL ID not found";
+                    replySearch->deleteLater();
+                    QCoreApplication::quit();
+                    return;
+                }
 
-                // }
+                // Use anime id from search request to get anime info with broadcast info
                 std::string urlInfoStr{"https://api.jikan.moe/v4/anime/" + std::to_string(malId)};
                 QUrl urlInfo(urlInfoStr.c_str());
                 QNetworkRequest requestInfo(urlInfo);
@@ -69,10 +72,12 @@ int main(int argc, char *argv[]) {
                         }
 
                         QJsonObject broadcastObj{dataObj["broadcast"].toObject()};
+                        qDebug() << "Broadcast: " << broadcastObj["string"].toString();
+                        qDebug() << "Day: " << broadcastObj["day"].toString();
                         qDebug() << "Time: " << broadcastObj["time"].toString();
                         qDebug() << "Timezone: " << broadcastObj["timezone"].toString();
                     } else {
-                        qDebug() << "Second request error:" << replyInfo->errorString();
+                        qDebug() << "Anime info request error:" << replyInfo->errorString();
                     }
 
                     replyInfo->deleteLater();
