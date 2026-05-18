@@ -9,6 +9,8 @@
 #include <QUrl>
 #include <QtTest>
 
+#include "broadcastUtils.h"
+
 int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
 
@@ -16,7 +18,6 @@ int main(int argc, char *argv[]) {
 
     int64_t malId = 0;
     QNetworkReply *replyInfo = nullptr;
-
     {
         // QUrl urlSearch("https://api.jikan.moe/v4/anime?q=youjo%20senki");
         QUrl urlSearch("https://api.jikan.moe/v4/anime?q=re%20zero%20season%204");
@@ -48,8 +49,8 @@ int main(int argc, char *argv[]) {
                 }
 
                 // Use anime id from search request to get anime info with broadcast info
-                std::string urlInfoStr{"https://api.jikan.moe/v4/anime/" + std::to_string(malId)};
-                QUrl urlInfo(urlInfoStr.c_str());
+                QString urlInfoStr{"https://api.jikan.moe/v4/anime/" + QString::number(malId)};
+                QUrl urlInfo(urlInfoStr);
                 QNetworkRequest requestInfo(urlInfo);
                 replyInfo = manager.get(requestInfo);
 
@@ -72,10 +73,26 @@ int main(int argc, char *argv[]) {
                         }
 
                         QJsonObject broadcastObj{dataObj["broadcast"].toObject()};
-                        qDebug() << "Broadcast: " << broadcastObj["string"].toString();
-                        qDebug() << "Day: " << broadcastObj["day"].toString();
-                        qDebug() << "Time: " << broadcastObj["time"].toString();
-                        qDebug() << "Timezone: " << broadcastObj["timezone"].toString();
+                        QString jpnBroadcastInfo = broadcastObj["string"].toString();
+                        QString jpnDay = broadcastObj["day"].toString();
+                        QString jpnTime = broadcastObj["time"].toString();
+                        QString jpnTimezone = broadcastObj["timezone"].toString();
+                        qDebug() << "Broadcast: " << jpnBroadcastInfo;
+                        qDebug() << "Day: " << jpnDay;
+                        qDebug() << "Time: " << jpnTime;
+                        qDebug() << "Timezone: " << jpnTimezone;
+
+                        BroadcastTime jpnBroadcastTime(jpnDay, jpnTime, jpnTimezone);
+
+                        // check if new episode comes out today
+                        // WRONG TIMEZONE
+                        // if (weekdaySingular != QDate::currentDate().toString("dddd")) {
+                        //     qDebug() << "Episode not airing today";
+                        //     replyInfo->deleteLater();
+                        //     QCoreApplication::quit();
+                        //     return;
+                        // }
+
                     } else {
                         qDebug() << "Anime info request error:" << replyInfo->errorString();
                     }
