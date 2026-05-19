@@ -1,5 +1,6 @@
 #include "broadcastUtils.h"
 
+#include <QJsonObject>
 #include <QNetworkRequest>
 
 namespace broadcastUtils {
@@ -25,5 +26,28 @@ int weekdayNumFromName(const QString &weekdayName) {
 }
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
+
+bool sendPushNotification() {
+    QNetworkRequest request(QUrl("https://api.pushbullet.com/v2/pushes"));
+
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    // TODO: hardcoded access token is unsafe, change it and reset tokens from https://www.pushbullet.com/#settings
+    QString token = qEnvironmentVariable("PUSHBULLET_TOKEN");
+
+    if (token.isEmpty()) {
+        qWarning() << "Missing PUSHBULLET_TOKEN!";
+    }
+    request.setRawHeader("Access-Token", token.toUtf8());
+
+    QJsonObject obj;
+    obj["type"] = "note";
+    obj["title"] = "Anime Alert";
+    obj["body"] = "One Piece airs today!";
+
+    QJsonDocument doc(obj);
+
+    manager.post(request, doc.toJson());
+}
 
 } // namespace broadcastUtils
