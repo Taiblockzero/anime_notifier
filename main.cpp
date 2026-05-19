@@ -82,16 +82,26 @@ int main(int argc, char *argv[]) {
                         qDebug() << "Time: " << jpnTime;
                         qDebug() << "Timezone: " << jpnTimezone;
 
-                        BroadcastTime jpnBroadcastTime(jpnDay, jpnTime, jpnTimezone);
+                        QString weekdaySingular = jpnDay.chopped(1); // remove last 's' to make it singlular
+                        // get next broadcast time w/ specific date
+                        QDate nextBroadcastJp = broadcastUtils::nextWeekdayDate(weekdaySingular);
+                        QTimeZone tokyoTz(jpnTimezone.toUtf8());
+                        QList splitTime = jpnTime.split(':'); // ex. [10, 30]
+
+                        QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
+                        QDateTime localBroadcast = jpBroadcast.toLocalTime();
 
                         // check if new episode comes out today
-                        // WRONG TIMEZONE
-                        // if (weekdaySingular != QDate::currentDate().toString("dddd")) {
-                        //     qDebug() << "Episode not airing today";
-                        //     replyInfo->deleteLater();
-                        //     QCoreApplication::quit();
-                        //     return;
-                        // }
+                        if (!broadcastUtils::isToday(localBroadcast)) {
+                            qDebug() << "Anime is not airing today";
+                            replyInfo->deleteLater();
+                            QCoreApplication::quit();
+                            return;
+                        }
+
+                        // make notification time from airing time + buffer for the episode to be translated
+                        QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
+                        // check if notification time has passed
 
                     } else {
                         qDebug() << "Anime info request error:" << replyInfo->errorString();

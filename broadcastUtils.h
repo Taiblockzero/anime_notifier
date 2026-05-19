@@ -1,16 +1,19 @@
 #pragma once
 
-#include <QCoreApplication>
-#include <QTimeZone>
+#include <qdatetime.h>
 
-class BroadcastTime {
-    QString weekday_;
-    QString time_;
-    QString timezone_;
+namespace broadcastUtils {
 
-  public:
-    BroadcastTime(QString weekday, QString time, QString timezone) : weekday_(weekday), time_(time), timezone_(timezone) {}
+// Returns specific date of the next weekday from parameter
+QDate nextWeekdayDate(QString targetDay);
 
-    // change to specific timezone
-    bool changeTimezone(QString timezone);
-};
+// Convert weekday from name to number ex. "Wednesday"->3
+int weekdayNumFromName(const QString &weekdayName);
+
+// Check if qdatetime is today
+bool isToday(const QDateTime &datetime);
+
+// Send push notification to phone
+// bool sendPushNotification();
+
+} // namespace broadcastUtils
