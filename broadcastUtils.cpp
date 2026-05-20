@@ -32,7 +32,6 @@ bool sendPushNotification() {
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // TODO: hardcoded access token is unsafe, change it and reset tokens from https://www.pushbullet.com/#settings
     QString token = qEnvironmentVariable("PUSHBULLET_TOKEN");
 
     if (token.isEmpty()) {
@@ -47,7 +46,7 @@ bool sendPushNotification() {
 
     QJsonDocument doc(obj);
 
-    manager.post(request, doc.toJson());
+    // manager.post(request, doc.toJson());
 }
 
 } // namespace broadcastUtils

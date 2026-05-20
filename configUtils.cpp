@@ -5,25 +5,25 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-namespace config {
+namespace cfg {
 
-QJsonObject initialize(const QString &configFile) {
-    QFile file(configFile);
+bool Config::save(QString filename) {
+    QJsonObject obj;
 
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open" << configFile;
-        return {};
+    // Add new members here
+    obj["pushbullet_token"] = pushbulletToken;
+
+    QJsonDocument doc(obj);
+
+    QFile file(filename);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "Failed to write config";
+        return false;
     }
 
-    QByteArray data = file.readAll();
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-
-    if (!doc.isObject()) {
-        qWarning() << "Invalid config format";
-        return {};
-    }
-
-    return doc.object();
+    file.write(doc.toJson(QJsonDocument::Indented));
+    return true;
 }
 
-} // namespace config
+} // namespace cfg

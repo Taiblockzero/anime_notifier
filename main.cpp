@@ -10,9 +10,14 @@
 #include <QtTest>
 
 #include "broadcastUtils.h"
+#include "configUtils.h"
 
 int main(int argc, char *argv[]) {
+
     QCoreApplication a(argc, argv);
+
+    cfg::Config config = cfg::Config::load("config.json");
+    qDebug() << config.pushbulletToken;
 
     QNetworkAccessManager manager;
 
@@ -102,6 +107,14 @@ int main(int argc, char *argv[]) {
                         // make notification time from airing time + buffer for the episode to be translated
                         QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
                         // check if notification time has passed
+                        if (notificationTime > QDateTime::currentDateTime()) {
+                            qDebug() << "The new episode is not ready to watch yet";
+                            replyInfo->deleteLater();
+                            QCoreApplication::quit();
+                            return;
+                        }
+
+                        // notify that anime episode is up
 
                     } else {
                         qDebug() << "Anime info request error:" << replyInfo->errorString();

@@ -14,6 +14,6 @@ int weekdayNumFromName(const QString &weekdayName);
 bool isToday(const QDateTime &datetime);
 
 // Send push notification to phone
-// bool sendPushNotification();
+bool sendPushNotification();
 
 } // namespace broadcastUtils
