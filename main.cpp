@@ -16,8 +16,7 @@ int main(int argc, char *argv[]) {
 
     QCoreApplication a(argc, argv);
 
-    cfg::Config config = cfg::Config::load("config.json");
-    qDebug() << config.pushbulletToken;
+    cfg::Config conf = cfg::Config::load("config.json");
 
     QNetworkAccessManager manager;
 
@@ -96,6 +95,10 @@ int main(int argc, char *argv[]) {
                         QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
                         QDateTime localBroadcast = jpBroadcast.toLocalTime();
 
+                        // DELETE
+                        localBroadcast.setDate(QDate(2026, 5, 21));
+                        localBroadcast.setTime(QTime(10, 15));
+
                         // check if new episode comes out today
                         if (!broadcastUtils::isToday(localBroadcast)) {
                             qDebug() << "Anime is not airing today";
@@ -115,13 +118,19 @@ int main(int argc, char *argv[]) {
                         }
 
                         // notify that anime episode is up
+                        if (!broadcastUtils::sendPushNotification(conf, manager)) {
+                            qDebug() << "Failed sending push notification";
+                            replyInfo->deleteLater();
+                            QCoreApplication::quit();
+                            return;
+                        }
+                        qDebug() << "Requested push notification";
 
                     } else {
                         qDebug() << "Anime info request error:" << replyInfo->errorString();
                     }
 
                     replyInfo->deleteLater();
-                    QCoreApplication::quit();
                 });
             } else {
                 qDebug() << "Error:" << replySearch->errorString();

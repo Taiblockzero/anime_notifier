@@ -1,7 +1,8 @@
 #include "broadcastUtils.h"
+#include "qnetworkaccessmanager.h"
 
+#include <QCoreApplication>
 #include <QJsonObject>
-#include <QNetworkRequest>
 
 namespace broadcastUtils {
 
@@ -27,17 +28,16 @@ int weekdayNumFromName(const QString &weekdayName) {
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
 
-bool sendPushNotification() {
+bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager) {
+    if (conf.pushbulletToken.isEmpty()) {
+        qWarning() << "Missing PUSHBULLET_TOKEN!";
+    }
+
     QNetworkRequest request(QUrl("https://api.pushbullet.com/v2/pushes"));
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    QString token = qEnvironmentVariable("PUSHBULLET_TOKEN");
-
-    if (token.isEmpty()) {
-        qWarning() << "Missing PUSHBULLET_TOKEN!";
-    }
-    request.setRawHeader("Access-Token", token.toUtf8());
+    request.setRawHeader("Access-Token", conf.pushbulletToken.toUtf8());
 
     QJsonObject obj;
     obj["type"] = "note";
@@ -46,7 +46,21 @@ bool sendPushNotification() {
 
     QJsonDocument doc(obj);
 
-    // manager.post(request, doc.toJson());
+    QNetworkReply *reply = manager.post(request, doc.toJson());
+
+    QObject::connect(reply, &QNetworkReply::finished, [reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "Push notification sent!";
+        } else {
+            qWarning() << "Pushbullet error:" << reply->errorString();
+        }
+
+        qDebug() << "Successfully pushed notification";
+        reply->deleteLater();
+        QCoreApplication::quit();
+    });
+
+    return true;
 }
 
 } // namespace broadcastUtils

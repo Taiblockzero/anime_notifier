@@ -1,6 +1,9 @@
 #pragma once
 
-#include <qdatetime.h>
+#include "configUtils.h"
+
+#include <QDateTime>
+#include <QNetworkReply>
 
 namespace broadcastUtils {
 
@@ -14,6 +17,6 @@ int weekdayNumFromName(const QString &weekdayName);
 bool isToday(const QDateTime &datetime);
 
 // Send push notification to phone
-bool sendPushNotification();
+bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager);
 
 } // namespace broadcastUtils
