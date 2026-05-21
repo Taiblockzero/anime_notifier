@@ -7,6 +7,14 @@
 
 namespace broadcastUtils {
 
+enum class PushTypes { note };
+
+struct PushNotification {
+    PushTypes type;
+    QString title;
+    QString body;
+};
+
 // Returns specific date of the next weekday from parameter
 QDate nextWeekdayDate(QString targetDay);
 
@@ -17,6 +25,6 @@ int weekdayNumFromName(const QString &weekdayName);
 bool isToday(const QDateTime &datetime);
 
 // Send push notification to phone
-bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager);
+bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager, const PushNotification &notification);
 
 } // namespace broadcastUtils

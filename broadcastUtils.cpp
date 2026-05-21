@@ -28,7 +28,7 @@ int weekdayNumFromName(const QString &weekdayName) {
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
 
-bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager) {
+bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager, const PushNotification &notification) {
     if (conf.pushbulletToken.isEmpty()) {
         qWarning() << "Missing PUSHBULLET_TOKEN!";
     }
@@ -40,9 +40,10 @@ bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manage
     request.setRawHeader("Access-Token", conf.pushbulletToken.toUtf8());
 
     QJsonObject obj;
-    obj["type"] = "note";
-    obj["title"] = "Anime Alert";
-    obj["body"] = "One Piece airs today!";
+    if (notification.type == PushTypes::note)
+        obj["type"] = "note";
+    obj["title"] = notification.title;
+    obj["body"] = notification.body;
 
     QJsonDocument doc(obj);
 
@@ -50,12 +51,11 @@ bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manage
 
     QObject::connect(reply, &QNetworkReply::finished, [reply]() {
         if (reply->error() == QNetworkReply::NoError) {
-            qDebug() << "Push notification sent!";
+            qDebug() << "Successfully pushed notification";
         } else {
             qWarning() << "Pushbullet error:" << reply->errorString();
         }
 
-        qDebug() << "Successfully pushed notification";
         reply->deleteLater();
         QCoreApplication::quit();
     });

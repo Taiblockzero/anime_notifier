@@ -24,12 +24,19 @@ int main(int argc, char *argv[]) {
     QNetworkReply *replyInfo = nullptr;
     {
         // QUrl urlSearch("https://api.jikan.moe/v4/anime?q=youjo%20senki");
-        QUrl urlSearch("https://api.jikan.moe/v4/anime?q=re%20zero%20season%204");
+        QString searchName = "re zero season 4";
+
+        QUrl urlSearch("https://api.jikan.moe/v4/anime");
+        QUrlQuery query;
+        query.addQueryItem("q", searchName);
+        urlSearch.setQuery(query);
+        qDebug() << urlSearch.toString();
+
         QNetworkRequest requestSearch(urlSearch);
 
         QNetworkReply *replySearch = manager.get(requestSearch);
 
-        QObject::connect(replySearch, &QNetworkReply::finished, [&]() {
+        QObject::connect(replySearch, &QNetworkReply::finished, [&, searchName, replySearch]() {
             if (replySearch->error() == QNetworkReply::NoError) {
                 // Search request success
                 {
@@ -58,7 +65,7 @@ int main(int argc, char *argv[]) {
                 QNetworkRequest requestInfo(urlInfo);
                 replyInfo = manager.get(requestInfo);
 
-                QObject::connect(replyInfo, &QNetworkReply::finished, [&]() {
+                QObject::connect(replyInfo, &QNetworkReply::finished, [&, searchName]() {
                     if (replyInfo->error() == QNetworkReply::NoError) {
                         QByteArray response = replyInfo->readAll();
 
@@ -118,7 +125,11 @@ int main(int argc, char *argv[]) {
                         }
 
                         // notify that anime episode is up
-                        if (!broadcastUtils::sendPushNotification(conf, manager)) {
+                        broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
+                                                                      .title = searchName + " is up",
+                                                                      .body = searchName + " has broadcasted and is ready to watch"};
+
+                        if (!broadcastUtils::sendPushNotification(conf, manager, notification)) {
                             qDebug() << "Failed sending push notification";
                             replyInfo->deleteLater();
                             QCoreApplication::quit();
