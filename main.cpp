@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
                     malId = firstObj["mal_id"].toInt();
                     animeTitle = firstObj["title"].toString();
                 }
+                qDebug();
+                qDebug() << "Current time:" << QDateTime::currentDateTime().toString();
                 qDebug() << "MAL ID:" << malId;
                 qDebug() << "Title:" << animeTitle;
 
