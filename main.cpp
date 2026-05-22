@@ -104,8 +104,8 @@ int main(int argc, char *argv[]) {
                         qDebug() << "Local time:" << localBroadcast.toString();
 
                         // DELETE
-                        localBroadcast.setDate(QDate(2026, 5, 22));
-                        localBroadcast.setTime(QTime(10, 15));
+                        // localBroadcast.setDate(QDate(2026, 5, 22));
+                        // localBroadcast.setTime(QTime(10, 15));
 
                         // check if new episode comes out today
                         if (!broadcastUtils::isToday(localBroadcast)) {
