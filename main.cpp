@@ -8,6 +8,7 @@
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QtTest>
+#include <iostream>
 
 #include "broadcastUtils.h"
 #include "configUtils.h"
@@ -21,22 +22,25 @@ int main(int argc, char *argv[]) {
     QNetworkAccessManager manager;
 
     int64_t malId = 0;
+    QString animeTitle;
     QNetworkReply *replyInfo = nullptr;
     {
-        // QUrl urlSearch("https://api.jikan.moe/v4/anime?q=youjo%20senki");
-        QString searchName = "re zero season 4";
+        QString search;
+        qDebug() << "Type something:";
+        QTextStream in(stdin);
+        search = in.readLine();
+        // QString search = "re zero season 4";
 
         QUrl urlSearch("https://api.jikan.moe/v4/anime");
         QUrlQuery query;
-        query.addQueryItem("q", searchName);
+        query.addQueryItem("q", search);
         urlSearch.setQuery(query);
-        qDebug() << urlSearch.toString();
 
         QNetworkRequest requestSearch(urlSearch);
 
         QNetworkReply *replySearch = manager.get(requestSearch);
 
-        QObject::connect(replySearch, &QNetworkReply::finished, [&, searchName, replySearch]() {
+        QObject::connect(replySearch, &QNetworkReply::finished, [&, search, replySearch]() {
             if (replySearch->error() == QNetworkReply::NoError) {
                 // Search request success
                 {
@@ -49,8 +53,10 @@ int main(int argc, char *argv[]) {
                     QJsonArray dataArr = jsonObj["data"].toArray();
                     QJsonObject firstObj = dataArr[0].toObject();
                     malId = firstObj["mal_id"].toInt();
+                    animeTitle = firstObj["title"].toString();
                 }
                 qDebug() << "MAL ID:" << malId;
+                qDebug() << "Title:" << animeTitle;
 
                 if (!malId) {
                     qDebug() << "MAL ID not found";
@@ -65,7 +71,7 @@ int main(int argc, char *argv[]) {
                 QNetworkRequest requestInfo(urlInfo);
                 replyInfo = manager.get(requestInfo);
 
-                QObject::connect(replyInfo, &QNetworkReply::finished, [&, searchName]() {
+                QObject::connect(replyInfo, &QNetworkReply::finished, [&, search]() {
                     if (replyInfo->error() == QNetworkReply::NoError) {
                         QByteArray response = replyInfo->readAll();
 
@@ -102,8 +108,10 @@ int main(int argc, char *argv[]) {
                         QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
                         QDateTime localBroadcast = jpBroadcast.toLocalTime();
 
+                        qDebug() << "Local time:" << localBroadcast.toString();
+
                         // DELETE
-                        localBroadcast.setDate(QDate(2026, 5, 21));
+                        localBroadcast.setDate(QDate(2026, 5, 22));
                         localBroadcast.setTime(QTime(10, 15));
 
                         // check if new episode comes out today
@@ -116,6 +124,7 @@ int main(int argc, char *argv[]) {
 
                         // make notification time from airing time + buffer for the episode to be translated
                         QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
+                        qDebug() << "Notification time(local):" << notificationTime.toString();
                         // check if notification time has passed
                         if (notificationTime > QDateTime::currentDateTime()) {
                             qDebug() << "The new episode is not ready to watch yet";
@@ -126,8 +135,8 @@ int main(int argc, char *argv[]) {
 
                         // notify that anime episode is up
                         broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
-                                                                      .title = searchName + " is up",
-                                                                      .body = searchName + " has broadcasted and is ready to watch"};
+                                                                      .title = search + " is up",
+                                                                      .body = search + " has broadcasted and is ready to watch"};
 
                         if (!broadcastUtils::sendPushNotification(conf, manager, notification)) {
                             qDebug() << "Failed sending push notification";
