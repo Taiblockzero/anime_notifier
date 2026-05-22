@@ -8,7 +8,6 @@
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QtTest>
-#include <iostream>
 
 #include "broadcastUtils.h"
 #include "configUtils.h"
@@ -25,22 +24,16 @@ int main(int argc, char *argv[]) {
     QString animeTitle;
     QNetworkReply *replyInfo = nullptr;
     {
-        QString search;
-        qDebug() << "Type something:";
-        QTextStream in(stdin);
-        search = in.readLine();
-        // QString search = "re zero season 4";
-
         QUrl urlSearch("https://api.jikan.moe/v4/anime");
         QUrlQuery query;
-        query.addQueryItem("q", search);
+        query.addQueryItem("q", conf.animeSearches[0]);
         urlSearch.setQuery(query);
 
         QNetworkRequest requestSearch(urlSearch);
 
         QNetworkReply *replySearch = manager.get(requestSearch);
 
-        QObject::connect(replySearch, &QNetworkReply::finished, [&, search, replySearch]() {
+        QObject::connect(replySearch, &QNetworkReply::finished, [&, conf, replySearch]() {
             if (replySearch->error() == QNetworkReply::NoError) {
                 // Search request success
                 {
@@ -71,7 +64,7 @@ int main(int argc, char *argv[]) {
                 QNetworkRequest requestInfo(urlInfo);
                 replyInfo = manager.get(requestInfo);
 
-                QObject::connect(replyInfo, &QNetworkReply::finished, [&, search]() {
+                QObject::connect(replyInfo, &QNetworkReply::finished, [&, conf]() {
                     if (replyInfo->error() == QNetworkReply::NoError) {
                         QByteArray response = replyInfo->readAll();
 
@@ -135,8 +128,9 @@ int main(int argc, char *argv[]) {
 
                         // notify that anime episode is up
                         broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
-                                                                      .title = search + " is up",
-                                                                      .body = search + " has broadcasted and is ready to watch"};
+                                                                      .title = "'" + animeTitle + "' new episode released",
+                                                                      .body = "'" + animeTitle +
+                                                                              "' newest episode has broadcasted and is ready to watch"};
 
                         if (!broadcastUtils::sendPushNotification(conf, manager, notification)) {
                             qDebug() << "Failed sending push notification";
