@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QDebug>
 #include <QFile>
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 
 #include <QString>

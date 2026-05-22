@@ -2,6 +2,7 @@
 #include "qnetworkaccessmanager.h"
 
 #include <QCoreApplication>
+#include <QJsonDocument>
 #include <QJsonObject>
 
 namespace broadcastUtils {
