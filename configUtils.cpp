@@ -11,7 +11,7 @@ bool Config::save(QString filename) {
     QJsonObject obj;
 
     // Add new members here
-    obj["pushbullet_token"] = pushbulletToken;
+    obj["pushbullet_token"] = pushbulletToken_;
 
     QJsonDocument doc(obj);
 

@@ -29,8 +29,8 @@ int weekdayNumFromName(const QString &weekdayName) {
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
 
-bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manager, const PushNotification &notification) {
-    if (conf.pushbulletToken.isEmpty()) {
+bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager, const PushNotification &notification) {
+    if (pushbulletToken.isEmpty()) {
         qWarning() << "Missing PUSHBULLET_TOKEN!";
     }
 
@@ -38,7 +38,7 @@ bool sendPushNotification(const cfg::Config &conf, QNetworkAccessManager &manage
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    request.setRawHeader("Access-Token", conf.pushbulletToken.toUtf8());
+    request.setRawHeader("Access-Token", pushbulletToken.toUtf8());
 
     QJsonObject obj;
     if (notification.type == PushTypes::note)

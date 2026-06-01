@@ -12,8 +12,8 @@ namespace cfg {
 
 class Config {
   public:
-    QString pushbulletToken;
-    QStringList animeSearches;
+    QString pushbulletToken_;
+    QStringList animeSearches_;
 
     static Config load(QString filename) {
         Config c;
@@ -25,11 +25,11 @@ class Config {
         }
 
         QJsonObject obj = QJsonDocument::fromJson(file.readAll()).object();
-        c.pushbulletToken = obj["pushbullet_token"].toString();
+        c.pushbulletToken_ = obj["pushbullet_token"].toString();
         // load anime searches
         const QJsonArray arr = obj["anime_searches"].toArray();
         for (const auto &search : arr) {
-            c.animeSearches.append(search.toString());
+            c.animeSearches_.append(search.toString());
         }
 
         return c;
