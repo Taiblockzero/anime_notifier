@@ -91,7 +91,8 @@ void AnimeNotifier::start() {
                     // FOR TESTING - DELETE
                     notificationTime.setDate(QDate::currentDate());
                     notificationTime.setTime(QTime::currentTime());
-                    qDebug() << "Changed notification time to" << notificationTime.toString() << "for testing purposes, remember to DELETE!!!";
+                    qDebug() << "Changed notification time to" << notificationTime.toString()
+                             << "for testing purposes, remember to DELETE!!!";
 
                     // check if new episode notification should be sent today
                     if (!broadcastUtils::isToday(notificationTime)) {
@@ -111,10 +112,10 @@ void AnimeNotifier::start() {
                     }
 
                     // notify that anime episode is up
-                    broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
-                                                                  .title = "'" + animeTitle_ + "' new episode released",
-                                                                  .body =
-                                                                      "'" + animeTitle_ + "' newest episode has broadcasted and is ready to watch"};
+                    broadcastUtils::PushNotification notification{
+                        .type = broadcastUtils::PushTypes::note,
+                        .title = "'" + animeTitle_ + "' new episode released",
+                        .body = "'" + animeTitle_ + "' newest episode has broadcasted and is ready to watch"};
 
                     if (!broadcastUtils::sendPushNotification(conf_.pushbulletToken_, manager_, notification)) {
                         qDebug() << "Failed sending push notification";

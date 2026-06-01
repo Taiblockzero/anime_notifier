@@ -29,7 +29,8 @@ int weekdayNumFromName(const QString &weekdayName) {
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
 
-bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager, const PushNotification &notification) {
+bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
+                          const PushNotification &notification) {
     if (pushbulletToken.isEmpty()) {
         qWarning() << "Missing PUSHBULLET_TOKEN!";
     }
