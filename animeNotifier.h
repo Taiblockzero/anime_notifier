@@ -20,8 +20,11 @@ class AnimeNotifier {
     void start();
 
   private:
+    QNetworkReply *createSearchRequest(const QString &search);
+    QUrl combineUrlWithQuery(const QString &urlStr, const QString &queryItem);
+
+  private:
     QNetworkAccessManager manager_;
-    QNetworkReply *replySearch_ = nullptr;
     QNetworkReply *replyInfo_ = nullptr;
     int64_t malId_ = 0;
     QString animeTitle_;
