@@ -15,9 +15,17 @@
 #include "configUtils.h"
 
 namespace notifier {
-class AnimeNotifier {
+class AnimeNotifier : public QObject {
+    Q_OBJECT
+
   public:
+    explicit AnimeNotifier(QObject *parent = nullptr);
+
     void start();
+
+  private slots:
+    void onFoundAnimeInfo();
+    void onFoundAnimeDetails();
 
   private:
     QNetworkReply *createSearchRequest(const QString &search);
