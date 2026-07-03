@@ -15,27 +15,48 @@
 #include "configUtils.h"
 
 namespace notifier {
+
+class AnimeJob : public QObject {
+    Q_OBJECT
+
+  public:
+    AnimeJob(QNetworkAccessManager &manager, const QString &search, const QString &pushbulletToken,
+             QObject *parent = nullptr);
+
+    void start();
+
+  signals:
+    void finished(); // tells notifier “move to next anime”
+
+  private slots:
+    void onSearchFinished();
+    void onDetailFinished();
+
+  private:
+    QNetworkAccessManager &manager_;
+    QString search_;
+
+    int malId_ = 0;
+    QString animeTitle_;
+    QString pushbulletToken_;
+
+    QNetworkReply *searchReply_ = nullptr;
+    QNetworkReply *detailReply_ = nullptr;
+};
+
 class AnimeNotifier : public QObject {
     Q_OBJECT
 
   public:
-    explicit AnimeNotifier(QObject *parent = nullptr);
-
     void start();
 
   private slots:
-    void onFoundAnimeInfo();
-    void onFoundAnimeDetails();
-
-  private:
-    QNetworkReply *createSearchRequest(const QString &search);
-    QUrl combineUrlWithQuery(const QString &urlStr, const QString &queryItem);
+    void runNextJob();
 
   private:
     QNetworkAccessManager manager_;
-    QNetworkReply *replyInfo_ = nullptr;
-    int64_t malId_ = 0;
-    QString animeTitle_;
+    QStringList animeList_;
+    int index_ = 0;
     cfg::Config conf_;
 };
 
