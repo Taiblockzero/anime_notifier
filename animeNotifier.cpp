@@ -7,18 +7,30 @@ AnimeJob::AnimeJob(QNetworkAccessManager &manager, const QString &search, const 
     : QObject(parent), manager_(manager), search_(search), pushbulletToken_(pushbulletToken) {}
 
 void AnimeJob::start() {
-    QUrl url("https://api.jikan.moe/v4/anime");
+    QUrl url(URL_STR);
     QUrlQuery q;
     q.addQueryItem("q", search_);
     url.setQuery(q);
+    qDebug() << "Encoded Url:" << url.toEncoded();
 
-    searchReply_ = manager_.get(QNetworkRequest(url));
+    QNetworkRequest request(url);
+
+    request.setHeader(QNetworkRequest::UserAgentHeader, "WeeklyAnimeNotifier/1.0");
+
+    searchReply_ = manager_.get(request);
 
     connect(searchReply_, &QNetworkReply::finished, this, &AnimeJob::onSearchFinished);
 }
 
 void AnimeJob::onSearchFinished() {
     if (searchReply_->error() != QNetworkReply::NoError) {
+        qDebug() << "Qt error:" << searchReply_->error();
+        qDebug() << "Error string:" << searchReply_->errorString();
+        qDebug() << "HTTP status:" << searchReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        QByteArray body = searchReply_->readAll();
+        qDebug() << "Response body:" << body;
+
+        qWarning() << searchReply_->errorString();
         searchReply_->deleteLater();
         emit finished();
         return;
@@ -39,7 +51,7 @@ void AnimeJob::onSearchFinished() {
         return;
     }
 
-    QUrl url("https://api.jikan.moe/v4/anime/" + QString::number(malId_));
+    QUrl url(URL_STR + QString::number(malId_));
     detailReply_ = manager_.get(QNetworkRequest(url));
 
     connect(detailReply_, &QNetworkReply::finished, this, &AnimeJob::onDetailFinished);
@@ -148,6 +160,8 @@ void AnimeNotifier::start() {
 }
 
 void AnimeNotifier::runNextJob() {
+    qDebug() << "runNextJob index:" << index_;
+
     if (index_ >= animeList_.size()) {
         qDebug() << "Done with anime search list";
         return;
@@ -155,9 +169,15 @@ void AnimeNotifier::runNextJob() {
 
     QString search = animeList_[index_++];
 
+    qDebug() << "Creating job for:" << search;
+
     auto *job = new AnimeJob(manager_, search, conf_.pushbulletToken_, this);
 
-    connect(job, &AnimeJob::finished, this, &AnimeNotifier::runNextJob);
+    connect(job, &AnimeJob::finished, this, [this, search]() {
+        qDebug() << "Finished job:" << search;
+        QTimer::singleShot(1000, this, &AnimeNotifier::runNextJob);
+        // runNextJob();
+    });
 
     job->start();
 }

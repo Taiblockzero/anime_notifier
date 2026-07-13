@@ -42,6 +42,8 @@ class AnimeJob : public QObject {
 
     QNetworkReply *searchReply_ = nullptr;
     QNetworkReply *detailReply_ = nullptr;
+
+    const QString URL_STR = "https://api.tenrai.org/v1/anime";
 };
 
 class AnimeNotifier : public QObject {
