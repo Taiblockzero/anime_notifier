@@ -20,7 +20,7 @@ class Config {
 
         QFile file(filename);
         if (!file.open(QIODevice::ReadOnly)) {
-            qDebug() << "Can't open config file";
+            qDebug() << "Can't open config file, looking in '" << filename << "'";
             return c;
         }
 

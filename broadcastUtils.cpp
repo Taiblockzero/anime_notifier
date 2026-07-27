@@ -59,7 +59,6 @@ bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager 
         }
 
         reply->deleteLater();
-        QCoreApplication::quit();
     });
 
     return true;
