@@ -51,7 +51,7 @@ void AnimeJob::onSearchFinished() {
         return;
     }
 
-    QUrl url(URL_STR + QString::number(malId_));
+    QUrl url(URL_STR + "/" + QString::number(malId_));
     detailReply_ = manager_.get(QNetworkRequest(url));
 
     connect(detailReply_, &QNetworkReply::finished, this, &AnimeJob::onDetailFinished);
