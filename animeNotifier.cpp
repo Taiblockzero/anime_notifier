@@ -134,19 +134,31 @@ void AnimeJob::onDetailFinished() {
                                                   .body = "'" + animeTitle_ +
                                                           "' newest episode has broadcasted and is ready to watch"};
 
-    if (!broadcastUtils::sendPushNotification(pushbulletToken_, manager_, notification)) {
+    QNetworkReply *pushbulletReply = broadcastUtils::sendPushNotification(pushbulletToken_, manager_, notification);
+
+    if (nullptr == pushbulletReply) {
         qDebug() << "Failed sending push notification";
         detailReply_->deleteLater();
         detailReply_ = nullptr;
         emit finished();
         return;
     }
+
+    QObject::connect(pushbulletReply, &QNetworkReply::finished, [this, pushbulletReply]() {
+        if (pushbulletReply->error() == QNetworkReply::NoError) {
+            qDebug() << "Successfully pushed notification";
+        } else {
+            qWarning() << "Pushbullet error:" << pushbulletReply->errorString();
+        }
+
+        pushbulletReply->deleteLater();
+        emit finished();
+    });
+
     qDebug() << "Requested push notification";
 
     detailReply_->deleteLater();
     detailReply_ = nullptr;
-
-    emit finished();
 }
 
 // ----------------- Anime Notifier ----------------------
@@ -164,6 +176,7 @@ void AnimeNotifier::runNextJob() {
 
     if (index_ >= animeList_.size()) {
         qDebug() << "Done with anime search list";
+        QCoreApplication::quit();
         return;
     }
 
@@ -176,7 +189,6 @@ void AnimeNotifier::runNextJob() {
     connect(job, &AnimeJob::finished, this, [this, search]() {
         qDebug() << "Finished job:" << search;
         QTimer::singleShot(1000, this, &AnimeNotifier::runNextJob);
-        // runNextJob();
     });
 
     job->start();

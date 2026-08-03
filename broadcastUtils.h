@@ -15,6 +15,8 @@ struct PushNotification {
     QString body;
 };
 
+const QString PUSHBULLET_URL = "https://api.pushbullet.com/v2/pushes";
+
 // Returns specific date of the next weekday from parameter
 QDate nextWeekdayDate(QString targetDay);
 
@@ -25,7 +27,8 @@ int weekdayNumFromName(const QString &weekdayName);
 bool isToday(const QDateTime &datetime);
 
 // Send push notification to phone
-bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
-                          const PushNotification &notification);
+// Sends request to pushbullet and returns reply for caller to handle
+QNetworkReply *sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
+                                    const PushNotification &notification);
 
 } // namespace broadcastUtils

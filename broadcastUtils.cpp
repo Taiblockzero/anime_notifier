@@ -29,13 +29,14 @@ int weekdayNumFromName(const QString &weekdayName) {
 
 bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::currentDate(); }
 
-bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
-                          const PushNotification &notification) {
+QNetworkReply *sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
+                                    const PushNotification &notification) {
     if (pushbulletToken.isEmpty()) {
         qWarning() << "Missing PUSHBULLET_TOKEN!";
+        return nullptr;
     }
 
-    QNetworkRequest request(QUrl("https://api.pushbullet.com/v2/pushes"));
+    QNetworkRequest request((QUrl(PUSHBULLET_URL)));
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -49,19 +50,7 @@ bool sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager 
 
     QJsonDocument doc(obj);
 
-    QNetworkReply *reply = manager.post(request, doc.toJson());
-
-    QObject::connect(reply, &QNetworkReply::finished, [reply]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            qDebug() << "Successfully pushed notification";
-        } else {
-            qWarning() << "Pushbullet error:" << reply->errorString();
-        }
-
-        reply->deleteLater();
-    });
-
-    return true;
+    return manager.post(request, doc.toJson());
 }
 
 } // namespace broadcastUtils

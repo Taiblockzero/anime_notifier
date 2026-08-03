@@ -1,3 +1,3 @@
 # Last thing done
 
-check why it doesn't send notifications and why it runs endlessly 
+fixed to work with all 3 searches and to not run endlessly using emit finished()
