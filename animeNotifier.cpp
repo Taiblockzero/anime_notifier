@@ -104,10 +104,10 @@ void AnimeJob::onDetailFinished() {
     QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
 
     // FOR TESTING - DELETE
-    notificationTime.setDate(QDate::currentDate());
-    notificationTime.setTime(QTime::currentTime());
-    qDebug() << "Changed notification time to" << notificationTime.toString()
-             << "for testing purposes, remember to DELETE!!!";
+    // notificationTime.setDate(QDate::currentDate());
+    // notificationTime.setTime(QTime::currentTime());
+    // qDebug() << "Changed notification time to" << notificationTime.toString()
+    //          << "for testing purposes, remember to DELETE!!!";
 
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime)) {
