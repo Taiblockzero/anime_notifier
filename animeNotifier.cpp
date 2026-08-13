@@ -85,29 +85,16 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    QString weekdaySingular = jpnDay_.chopped(1); // remove last 's' to make it singlular
-
-    // get next broadcast time w/ specific date
-    QDate nextBroadcastJp = broadcastUtils::nextWeekdayDate(weekdaySingular);
-    QTimeZone tokyoTz(jpnTimezone_.toUtf8());
-    QList splitTime = jpnTime_.split(':'); // ex. [10, 30]
-
-    QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
-    QDateTime localBroadcast = jpBroadcast.toLocalTime();
-
-    qDebug() << "Local time:" << localBroadcast.toString();
-
-    // make notification time from airing time + buffer for the episode to be translated
-    QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
+    calculateLocalNotificationTime();
 
     // FOR TESTING - DELETE
-    notificationTime.setDate(QDate::currentDate());
-    notificationTime.setTime(QTime::currentTime());
-    qDebug() << "Changed notification time to" << notificationTime.toString()
+    notificationTime_.setDate(QDate::currentDate());
+    notificationTime_.setTime(QTime::currentTime());
+    qDebug() << "Changed notification time to" << notificationTime_.toString()
              << "for testing purposes, remember to DELETE!!!";
 
     // check if new episode notification should be sent today
-    if (!broadcastUtils::isToday(notificationTime)) {
+    if (!broadcastUtils::isToday(notificationTime_)) {
         qDebug() << "Notification day is not today";
         detailReply_->deleteLater();
         detailReply_ = nullptr;
@@ -115,9 +102,9 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    qDebug() << "Notification time(local):" << notificationTime.toString();
+    qDebug() << "Notification time(local):" << notificationTime_.toString();
     // check if notification time has passed
-    if (notificationTime > QDateTime::currentDateTime()) {
+    if (notificationTime_ > QDateTime::currentDateTime()) {
         qDebug() << "The new episode is not ready to watch yet";
         detailReply_->deleteLater();
         detailReply_ = nullptr;
@@ -176,7 +163,22 @@ void AnimeJob::parseDetailReply() {
     qDebug() << "Timezone: " << jpnTimezone_;
 }
 
-bool AnimeJob::checkIfAiring() {}
+void AnimeJob::calculateLocalNotificationTime() {
+    QString weekdaySingular = jpnDay_.chopped(1); // remove last 's' to make it singular
+
+    // get next broadcast time w/ specific date
+    QDate nextBroadcastJp = broadcastUtils::nextWeekdayDate(weekdaySingular);
+    QTimeZone tokyoTz(jpnTimezone_.toUtf8());
+    QList splitTime = jpnTime_.split(':'); // ex. [10, 30]
+
+    QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
+    QDateTime localBroadcast = jpBroadcast.toLocalTime();
+
+    qDebug() << "Local time:" << localBroadcast.toString();
+
+    // make notification time from airing time + buffer for the episode to be translated
+    notificationTime_ = localBroadcast.addSecs(10800); // +3 hours
+}
 
 // ----------------- Anime Notifier ----------------------
 void AnimeNotifier::start() {

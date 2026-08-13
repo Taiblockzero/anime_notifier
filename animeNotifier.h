@@ -36,7 +36,7 @@ class AnimeJob : public QObject {
     bool parseSearchReply();
     void requestDetail();
     void parseDetailReply();
-    bool checkIfAiring();
+    void calculateLocalNotificationTime();
 
   private:
     QNetworkAccessManager &manager_;
@@ -50,6 +50,7 @@ class AnimeJob : public QObject {
     QString jpnDay_;
     QString jpnTime_;
     QString jpnTimezone_;
+    QDateTime notificationTime_;
 
     QNetworkReply *searchReply_ = nullptr;
     QNetworkReply *detailReply_ = nullptr;
