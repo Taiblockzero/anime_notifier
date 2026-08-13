@@ -37,6 +37,8 @@ class AnimeJob : public QObject {
     void requestDetail();
     void parseDetailReply();
     void calculateLocalNotificationTime();
+    void activateTestingMode(bool activate = false);
+    bool sendAnimeIsUpNotification();
 
   private:
     QNetworkAccessManager &manager_;

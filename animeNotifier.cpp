@@ -87,11 +87,8 @@ void AnimeJob::onDetailFinished() {
 
     calculateLocalNotificationTime();
 
-    // FOR TESTING - DELETE
-    notificationTime_.setDate(QDate::currentDate());
-    notificationTime_.setTime(QTime::currentTime());
-    qDebug() << "Changed notification time to" << notificationTime_.toString()
-             << "for testing purposes, remember to DELETE!!!";
+    // activate testing mode to change notification time to now
+    activateTestingMode(true);
 
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime_)) {
@@ -113,33 +110,15 @@ void AnimeJob::onDetailFinished() {
     }
 
     // notify that anime episode is up
-    broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
-                                                  .title = "'" + animeTitle_ + "' new episode released",
-                                                  .body = "'" + animeTitle_ +
-                                                          "' newest episode has broadcasted and is ready to watch"};
+    bool sentNotification = sendAnimeIsUpNotification();
 
-    QNetworkReply *pushbulletReply = broadcastUtils::sendPushNotification(pushbulletToken_, manager_, notification);
-
-    if (nullptr == pushbulletReply) {
-        qDebug() << "Failed sending push notification";
+    if (!sentNotification) {
+        qDebug() << "Failed sending push notification api request";
         detailReply_->deleteLater();
         detailReply_ = nullptr;
         emit finished();
         return;
     }
-
-    QObject::connect(pushbulletReply, &QNetworkReply::finished, [this, pushbulletReply]() {
-        if (pushbulletReply->error() == QNetworkReply::NoError) {
-            qDebug() << "Successfully pushed notification";
-        } else {
-            qWarning() << "Pushbullet error:" << pushbulletReply->errorString();
-        }
-
-        pushbulletReply->deleteLater();
-        emit finished();
-    });
-
-    qDebug() << "Requested push notification";
 
     detailReply_->deleteLater();
     detailReply_ = nullptr;
@@ -178,6 +157,45 @@ void AnimeJob::calculateLocalNotificationTime() {
 
     // make notification time from airing time + buffer for the episode to be translated
     notificationTime_ = localBroadcast.addSecs(10800); // +3 hours
+}
+
+void AnimeJob::activateTestingMode(bool activate) {
+    if (!activate)
+        return;
+
+    notificationTime_.setDate(QDate::currentDate());
+    notificationTime_.setTime(QTime::currentTime());
+    qDebug() << "Changed notification time to" << notificationTime_.toString()
+             << "for testing purposes, remember to DELETE!!!";
+}
+
+bool AnimeJob::sendAnimeIsUpNotification() {
+    broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
+                                                  .title = "'" + animeTitle_ + "' new episode released",
+                                                  .body = "'" + animeTitle_ +
+                                                          "' newest episode has broadcasted and is ready to watch"};
+
+    QNetworkReply *pushbulletReply = broadcastUtils::sendPushNotification(pushbulletToken_, manager_, notification);
+
+    if (nullptr == pushbulletReply) {
+        qDebug() << "Failed sending push notification";
+        return false;
+    }
+
+    qDebug() << "Requested push notification";
+
+    QObject::connect(pushbulletReply, &QNetworkReply::finished, [this, pushbulletReply]() {
+        if (pushbulletReply->error() == QNetworkReply::NoError) {
+            qDebug() << "Successfully pushed notification";
+        } else {
+            qWarning() << "Pushbullet error:" << pushbulletReply->errorString();
+        }
+
+        pushbulletReply->deleteLater();
+        emit finished();
+    });
+
+    return true;
 }
 
 // ----------------- Anime Notifier ----------------------
