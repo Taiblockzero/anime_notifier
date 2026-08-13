@@ -27,8 +27,7 @@ void AnimeJob::onSearchFinished() {
         qCritical() << "Qt error:" << searchReply_->error();
         qCritical() << "Error string:" << searchReply_->errorString();
 
-        searchReply_->deleteLater();
-        emit finished();
+        finishJob();
         return;
     }
 
@@ -44,8 +43,13 @@ void AnimeJob::onSearchFinished() {
 
 bool AnimeJob::parseSearchReply() {
     auto json = QJsonDocument::fromJson(searchReply_->readAll()).object();
+
     auto arr = json["data"].toArray();
-    auto first = arr[0].toObject();
+    if (arr.isEmpty()) {
+        qDebug() << "Empty 'data' in json";
+        return false;
+    }
+    auto first = arr.first().toObject();
 
     malId_ = first["mal_id"].toInt();
     animeTitle_ = first["title"].toString();
@@ -53,9 +57,7 @@ bool AnimeJob::parseSearchReply() {
     searchReply_->deleteLater();
     searchReply_ = nullptr;
 
-    if (!malId_)
-        return false;
-    return true;
+    return malId_ != 0;
 }
 
 void AnimeJob::requestDetail() {
@@ -70,8 +72,7 @@ void AnimeJob::onDetailFinished() {
         qCritical() << "Qt error:" << detailReply_->error();
         qCritical() << "Error string:" << detailReply_->errorString();
 
-        detailReply_->deleteLater();
-        emit finished();
+        finishJob();
         return;
     }
 
@@ -79,9 +80,7 @@ void AnimeJob::onDetailFinished() {
 
     if (!airing_) {
         qCritical() << "Anime not currently airing!";
-        detailReply_->deleteLater();
-        detailReply_ = nullptr;
-        emit finished();
+        finishJob();
         return;
     }
 
@@ -93,9 +92,7 @@ void AnimeJob::onDetailFinished() {
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime_)) {
         qDebug() << "Notification day is not today";
-        detailReply_->deleteLater();
-        detailReply_ = nullptr;
-        emit finished();
+        finishJob();
         return;
     }
 
@@ -103,20 +100,16 @@ void AnimeJob::onDetailFinished() {
     // check if notification time has passed
     if (notificationTime_ > QDateTime::currentDateTime()) {
         qDebug() << "The new episode is not ready to watch yet";
-        detailReply_->deleteLater();
-        detailReply_ = nullptr;
-        emit finished();
+        finishJob();
         return;
     }
 
     // notify that anime episode is up
-    bool sentNotification = sendAnimeIsUpNotification();
+    bool requestedNotification = sendAnimeIsUpNotification();
 
-    if (!sentNotification) {
+    if (!requestedNotification) {
         qDebug() << "Failed sending push notification api request";
-        detailReply_->deleteLater();
-        detailReply_ = nullptr;
-        emit finished();
+        finishJob();
         return;
     }
 
@@ -124,9 +117,20 @@ void AnimeJob::onDetailFinished() {
     detailReply_ = nullptr;
 }
 
-void AnimeJob::parseDetailReply() {
-    auto json = QJsonDocument::fromJson(detailReply_->readAll()).object();
-    auto animeDataObj = json["data"].toObject();
+bool AnimeJob::parseDetailReply() {
+    QJsonParseError err;
+
+    auto json = QJsonDocument::fromJson(detailReply_->readAll(), &err);
+    if (err.error != QJsonParseError::NoError) {
+        qDebug() << "Json parsing error";
+        return false;
+    }
+
+    auto animeDataObj = json.object()["data"].toObject();
+    if (animeDataObj.isEmpty()) {
+        qDebug() << "Empty anime data object";
+        return false;
+    }
 
     airing_ = animeDataObj["airing"].toBool();
     qDebug() << "Airing:" << airing_;
@@ -140,6 +144,8 @@ void AnimeJob::parseDetailReply() {
     qDebug() << "Day: " << jpnDay_;
     qDebug() << "Time: " << jpnTime_;
     qDebug() << "Timezone: " << jpnTimezone_;
+
+    return true;
 }
 
 void AnimeJob::calculateLocalNotificationTime() {
@@ -196,6 +202,20 @@ bool AnimeJob::sendAnimeIsUpNotification() {
     });
 
     return true;
+}
+
+void AnimeJob::finishJob() {
+    if (searchReply_) {
+        searchReply_->deleteLater();
+        searchReply_ = nullptr;
+    }
+
+    if (detailReply_) {
+        detailReply_->deleteLater();
+        detailReply_ = nullptr;
+    }
+
+    emit finished();
 }
 
 // ----------------- Anime Notifier ----------------------
