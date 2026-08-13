@@ -76,7 +76,11 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    parseDetailReply();
+    bool parsedDetail = parseDetailReply();
+    if (!parsedDetail) {
+        finishJob();
+        return;
+    }
 
     if (!airing_) {
         qCritical() << "Anime not currently airing!";
@@ -144,6 +148,11 @@ bool AnimeJob::parseDetailReply() {
     qDebug() << "Day: " << jpnDay_;
     qDebug() << "Time: " << jpnTime_;
     qDebug() << "Timezone: " << jpnTimezone_;
+
+    if (jpnDay_.isEmpty() || jpnTime_.isEmpty() || jpnTimezone_.isEmpty()) {
+        qDebug() << "Anime is missing broadcasting data";
+        return false;
+    }
 
     return true;
 }
