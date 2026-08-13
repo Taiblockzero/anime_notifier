@@ -75,36 +75,22 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    auto json = QJsonDocument::fromJson(detailReply_->readAll()).object();
-    auto animeDataObj = json["data"].toObject();
+    parseDetailReply();
 
-    bool airing = animeDataObj["airing"].toBool();
-
-    if (!airing) {
-        qDebug() << "Anime not currently airing! Exiting...";
+    if (!airing_) {
+        qCritical() << "Anime not currently airing!";
         detailReply_->deleteLater();
         detailReply_ = nullptr;
         emit finished();
         return;
     }
 
-    // Parse JSON
-    QJsonObject broadcastObj = animeDataObj["broadcast"].toObject();
-    QString jpnBroadcastInfo = broadcastObj["string"].toString();
-    QString jpnDay = broadcastObj["day"].toString();
-    QString jpnTime = broadcastObj["time"].toString();
-    QString jpnTimezone = broadcastObj["timezone"].toString();
-    qDebug() << "Broadcast: " << jpnBroadcastInfo;
-    qDebug() << "Day: " << jpnDay;
-    qDebug() << "Time: " << jpnTime;
-    qDebug() << "Timezone: " << jpnTimezone;
-
-    QString weekdaySingular = jpnDay.chopped(1); // remove last 's' to make it singlular
+    QString weekdaySingular = jpnDay_.chopped(1); // remove last 's' to make it singlular
 
     // get next broadcast time w/ specific date
     QDate nextBroadcastJp = broadcastUtils::nextWeekdayDate(weekdaySingular);
-    QTimeZone tokyoTz(jpnTimezone.toUtf8());
-    QList splitTime = jpnTime.split(':'); // ex. [10, 30]
+    QTimeZone tokyoTz(jpnTimezone_.toUtf8());
+    QList splitTime = jpnTime_.split(':'); // ex. [10, 30]
 
     QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
     QDateTime localBroadcast = jpBroadcast.toLocalTime();
@@ -171,6 +157,26 @@ void AnimeJob::onDetailFinished() {
     detailReply_->deleteLater();
     detailReply_ = nullptr;
 }
+
+void AnimeJob::parseDetailReply() {
+    auto json = QJsonDocument::fromJson(detailReply_->readAll()).object();
+    auto animeDataObj = json["data"].toObject();
+
+    airing_ = animeDataObj["airing"].toBool();
+    qDebug() << "Airing:" << airing_;
+
+    auto broadcastObj = animeDataObj["broadcast"].toObject();
+    jpnBroadcastInfo_ = broadcastObj["string"].toString();
+    jpnDay_ = broadcastObj["day"].toString();
+    jpnTime_ = broadcastObj["time"].toString();
+    jpnTimezone_ = broadcastObj["timezone"].toString();
+    qDebug() << "Broadcast: " << jpnBroadcastInfo_;
+    qDebug() << "Day: " << jpnDay_;
+    qDebug() << "Time: " << jpnTime_;
+    qDebug() << "Timezone: " << jpnTimezone_;
+}
+
+bool AnimeJob::checkIfAiring() {}
 
 // ----------------- Anime Notifier ----------------------
 void AnimeNotifier::start() {

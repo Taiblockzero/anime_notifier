@@ -35,6 +35,8 @@ class AnimeJob : public QObject {
   private:
     bool parseSearchReply();
     void requestDetail();
+    void parseDetailReply();
+    bool checkIfAiring();
 
   private:
     QNetworkAccessManager &manager_;
@@ -43,6 +45,11 @@ class AnimeJob : public QObject {
     int malId_ = 0;
     QString animeTitle_;
     QString pushbulletToken_;
+    bool airing_ = false;
+    QString jpnBroadcastInfo_;
+    QString jpnDay_;
+    QString jpnTime_;
+    QString jpnTimezone_;
 
     QNetworkReply *searchReply_ = nullptr;
     QNetworkReply *detailReply_ = nullptr;
