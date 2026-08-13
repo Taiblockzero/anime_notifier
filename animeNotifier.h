@@ -33,6 +33,10 @@ class AnimeJob : public QObject {
     void onDetailFinished();
 
   private:
+    bool parseSearchReply();
+    void requestDetail();
+
+  private:
     QNetworkAccessManager &manager_;
     QString search_;
 

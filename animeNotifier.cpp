@@ -24,18 +24,25 @@ void AnimeJob::start() {
 
 void AnimeJob::onSearchFinished() {
     if (searchReply_->error() != QNetworkReply::NoError) {
-        qDebug() << "Qt error:" << searchReply_->error();
-        qDebug() << "Error string:" << searchReply_->errorString();
-        qDebug() << "HTTP status:" << searchReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-        QByteArray body = searchReply_->readAll();
-        qDebug() << "Response body:" << body;
+        qCritical() << "Qt error:" << searchReply_->error();
+        qCritical() << "Error string:" << searchReply_->errorString();
 
-        qWarning() << searchReply_->errorString();
         searchReply_->deleteLater();
         emit finished();
         return;
     }
 
+    bool parsedSearch = parseSearchReply();
+
+    if (!parsedSearch) {
+        emit finished();
+        return;
+    }
+
+    requestDetail();
+}
+
+bool AnimeJob::parseSearchReply() {
     auto json = QJsonDocument::fromJson(searchReply_->readAll()).object();
     auto arr = json["data"].toArray();
     auto first = arr[0].toObject();
@@ -46,11 +53,12 @@ void AnimeJob::onSearchFinished() {
     searchReply_->deleteLater();
     searchReply_ = nullptr;
 
-    if (!malId_) {
-        emit finished();
-        return;
-    }
+    if (!malId_)
+        return false;
+    return true;
+}
 
+void AnimeJob::requestDetail() {
     QUrl url(URL_STR + "/" + QString::number(malId_));
     detailReply_ = manager_.get(QNetworkRequest(url));
 
@@ -59,6 +67,9 @@ void AnimeJob::onSearchFinished() {
 
 void AnimeJob::onDetailFinished() {
     if (detailReply_->error() != QNetworkReply::NoError) {
+        qCritical() << "Qt error:" << detailReply_->error();
+        qCritical() << "Error string:" << detailReply_->errorString();
+
         detailReply_->deleteLater();
         emit finished();
         return;
@@ -78,7 +89,7 @@ void AnimeJob::onDetailFinished() {
     }
 
     // Parse JSON
-    QJsonObject broadcastObj{animeDataObj["broadcast"].toObject()};
+    QJsonObject broadcastObj = animeDataObj["broadcast"].toObject();
     QString jpnBroadcastInfo = broadcastObj["string"].toString();
     QString jpnDay = broadcastObj["day"].toString();
     QString jpnTime = broadcastObj["time"].toString();
@@ -104,10 +115,10 @@ void AnimeJob::onDetailFinished() {
     QDateTime notificationTime = localBroadcast.addSecs(10800); // +3 hours
 
     // FOR TESTING - DELETE
-    // notificationTime.setDate(QDate::currentDate());
-    // notificationTime.setTime(QTime::currentTime());
-    // qDebug() << "Changed notification time to" << notificationTime.toString()
-    //          << "for testing purposes, remember to DELETE!!!";
+    notificationTime.setDate(QDate::currentDate());
+    notificationTime.setTime(QTime::currentTime());
+    qDebug() << "Changed notification time to" << notificationTime.toString()
+             << "for testing purposes, remember to DELETE!!!";
 
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime)) {
