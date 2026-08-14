@@ -91,7 +91,7 @@ void AnimeJob::onDetailFinished() {
     calculateLocalNotificationTime();
 
     // activate testing mode to change notification time to now
-    activateTestingMode(true);
+    activateTestingMode(false);
 
     // Notification already sent today
     if (hist_.getLatestDate(malId_) == notificationTime_.date()) {
