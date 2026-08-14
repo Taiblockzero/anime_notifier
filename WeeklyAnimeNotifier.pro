@@ -10,7 +10,8 @@ SOURCES += \
         animeNotifier.cpp \
         broadcastUtils.cpp \
         configUtils.cpp \
-        main.cpp
+        main.cpp \
+        persistentNotificationHistory.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -20,4 +21,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     animeNotifier.h \
     broadcastUtils.h \
-    configUtils.h
+    configUtils.h \
+    persistentNotificationHistory.h

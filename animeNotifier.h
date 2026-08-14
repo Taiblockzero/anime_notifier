@@ -13,6 +13,7 @@
 
 #include "broadcastUtils.h"
 #include "configUtils.h"
+#include "persistentNotificationHistory.h"
 
 namespace notifier {
 
@@ -43,6 +44,7 @@ class AnimeJob : public QObject {
 
   private:
     QNetworkAccessManager &manager_;
+    cfg::persistentNotificationHistory hist_;
     QString search_;
 
     int malId_ = 0;

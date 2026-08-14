@@ -93,6 +93,13 @@ void AnimeJob::onDetailFinished() {
     // activate testing mode to change notification time to now
     activateTestingMode(true);
 
+    // Notification already sent today
+    if (hist_.getLatestDate(malId_) == notificationTime_.date()) {
+        qDebug() << "Notification already sent today";
+        finishJob();
+        return;
+    }
+
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime_)) {
         qDebug() << "Notification day is not today";
@@ -116,6 +123,9 @@ void AnimeJob::onDetailFinished() {
         finishJob();
         return;
     }
+
+    // update latest notification sent date in persistent settings
+    hist_.setLatestDate(malId_, notificationTime_.date());
 
     detailReply_->deleteLater();
     detailReply_ = nullptr;
