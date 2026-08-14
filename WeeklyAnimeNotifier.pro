@@ -10,6 +10,7 @@ SOURCES += \
         animeNotifier.cpp \
         broadcastUtils.cpp \
         configUtils.cpp \
+        logging.cpp \
         main.cpp \
         persistentNotificationHistory.cpp
 
@@ -22,4 +23,5 @@ HEADERS += \
     animeNotifier.h \
     broadcastUtils.h \
     configUtils.h \
+    logging.h \
     persistentNotificationHistory.h
