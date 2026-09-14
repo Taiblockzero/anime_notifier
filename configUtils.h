@@ -10,10 +10,15 @@
 
 namespace cfg {
 
-class Config {
-  public:
+struct ConfigUser {
+    QString username_;
     QString pushbulletToken_;
     QStringList animeSearches_;
+};
+
+class Config {
+  public:
+    std::vector<ConfigUser> users;
 
     static Config load(QString filename) {
         Config c;
@@ -24,17 +29,24 @@ class Config {
             return c;
         }
 
-        QJsonObject obj = QJsonDocument::fromJson(file.readAll()).object();
-        c.pushbulletToken_ = obj["pushbullet_token"].toString();
-        // load anime searches
-        const QJsonArray arr = obj["anime_searches"].toArray();
-        for (const auto &search : arr) {
-            c.animeSearches_.append(search.toString());
+        // parse config JSON
+        QJsonObject rootObj = QJsonDocument::fromJson(file.readAll()).object();
+        QJsonArray usersArr = rootObj.value("users").toArray();
+        for (const auto &userVal : std::as_const(usersArr)) {
+            ConfigUser tempUser;
+            QJsonObject userObj = userVal.toObject();
+
+            tempUser.username_ = userObj["username"].toString();
+            tempUser.pushbulletToken_ = userObj["pushbullet_token"].toString();
+            const QJsonArray searchesArr = userObj["anime_searches"].toArray();
+            for (const auto &search : searchesArr) {
+                tempUser.animeSearches_.append(search.toString());
+            }
+
+            c.users.push_back(tempUser);
         }
 
         return c;
     }
-
-    bool save(QString filename);
 };
 } // namespace cfg

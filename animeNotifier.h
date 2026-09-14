@@ -38,9 +38,12 @@ class AnimeJob : public QObject {
     void requestDetail();
     bool parseDetailReply();
     void calculateLocalNotificationTime();
-    void activateTestingMode(bool activate = false);
+    /* Change notification sending time to Now if testing mode is on */
+    void changeTestingModeNotifTime();
     bool sendAnimeIsUpNotification();
     void finishJob();
+    /* Check if notification has been sent today already */
+    bool notificationAlreadySentToday();
 
   private:
     QNetworkAccessManager &manager_;
@@ -61,6 +64,14 @@ class AnimeJob : public QObject {
     QNetworkReply *detailReply_ = nullptr;
 
     const QString URL_STR = "https://api.tenrai.org/v1/anime";
+
+    bool testingMode_ = false;
+};
+
+struct UserSearchTask {
+    QString username_;
+    QString pushbulletToken_;
+    QString animeSearch_;
 };
 
 class AnimeNotifier : public QObject {
@@ -74,9 +85,15 @@ class AnimeNotifier : public QObject {
 
   private:
     QNetworkAccessManager manager_;
-    QStringList animeList_;
-    int index_ = 0;
+    std::vector<cfg::ConfigUser> users_;
+    std::vector<UserSearchTask> userSearches_;
+    std::size_t index_ = 0;
     cfg::Config conf_;
+
+  private:
+    /* Flattens config users to get from '1 user with many searches' -> '1 user with 1 search'.
+       Done in order to get them ready to use with anime job(1 search per job). */
+    void fillUserSearches();
 };
 
 } // namespace notifier

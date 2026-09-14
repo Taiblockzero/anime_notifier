@@ -91,11 +91,12 @@ void AnimeJob::onDetailFinished() {
     calculateLocalNotificationTime();
 
     // activate testing mode to change notification time to now
-    activateTestingMode(false);
+    testingMode_ = true;
+    changeTestingModeNotifTime();
 
     // Notification already sent today
-    if (hist_.getLatestDate(malId_) == notificationTime_.date()) {
-        qDebug() << "Notification already sent today";
+    if (notificationAlreadySentToday()) {
+        qWarning() << "Notification already sent today, skip";
         finishJob();
         return;
     }
@@ -140,7 +141,7 @@ bool AnimeJob::parseDetailReply() {
         return false;
     }
 
-    auto animeDataObj = json.object()["data"].toObject();
+    auto animeDataObj = json.object().value("data").toObject();
     if (animeDataObj.isEmpty()) {
         qDebug() << "Empty anime data object";
         return false;
@@ -184,8 +185,8 @@ void AnimeJob::calculateLocalNotificationTime() {
     notificationTime_ = localBroadcast.addSecs(10800); // +3 hours
 }
 
-void AnimeJob::activateTestingMode(bool activate) {
-    if (!activate)
+void AnimeJob::changeTestingModeNotifTime() {
+    if (!testingMode_)
         return;
 
     notificationTime_.setDate(QDate::currentDate());
@@ -237,12 +238,24 @@ void AnimeJob::finishJob() {
     emit finished();
 }
 
+bool AnimeJob::notificationAlreadySentToday() {
+    // Don't skip sending notifications when in testing mode
+    if (testingMode_)
+        return false;
+
+    if (hist_.getLatestDate(malId_) == notificationTime_.date())
+        return true;
+    return false;
+}
+
 // ----------------- Anime Notifier ----------------------
 void AnimeNotifier::start() {
     conf_ = cfg::Config::load("config.json");
 
-    animeList_ = conf_.animeSearches_;
+    users_ = conf_.users;
     index_ = 0;
+
+    fillUserSearches();
 
     runNextJob();
 }
@@ -250,24 +263,43 @@ void AnimeNotifier::start() {
 void AnimeNotifier::runNextJob() {
     qDebug() << "runNextJob index:" << index_;
 
-    if (index_ >= animeList_.size()) {
+    if (index_ >= userSearches_.size()) {
         qDebug() << "Done with anime search list";
         QCoreApplication::quit();
         return;
     }
 
-    QString search = animeList_[index_++];
+    UserSearchTask userSearch = userSearches_[index_++];
 
-    qDebug() << "Creating job for:" << search;
+    // QString search = animeList_[index_++];
 
-    auto *job = new AnimeJob(manager_, search, conf_.pushbulletToken_, this);
+    qDebug() << "Creating job with username '" << userSearch.username_ << "', search '" << userSearch.animeSearch_
+             << "'";
 
-    connect(job, &AnimeJob::finished, this, [this, search]() {
-        qDebug() << "Finished job:" << search;
+    auto *job = new AnimeJob(manager_, userSearch.animeSearch_, userSearch.pushbulletToken_, this);
+
+    connect(job, &AnimeJob::finished, this, [this, userSearch]() {
+        qDebug() << "Finished job with username '" << userSearch.username_ << "', search '" << userSearch.animeSearch_
+                 << "'";
         QTimer::singleShot(1000, this, &AnimeNotifier::runNextJob);
     });
 
     job->start();
+}
+
+void AnimeNotifier::fillUserSearches() {
+    if (users_.empty()) {
+        qDebug() << "Empty user list";
+        return;
+    }
+
+    for (const auto &user : users_) {
+        for (const auto &search : user.animeSearches_) {
+            UserSearchTask tempSearchTask{
+                .username_ = user.username_, .pushbulletToken_ = user.pushbulletToken_, .animeSearch_ = search};
+            userSearches_.push_back(tempSearchTask);
+        }
+    }
 }
 
 } // namespace notifier
