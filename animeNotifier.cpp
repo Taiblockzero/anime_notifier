@@ -2,37 +2,40 @@
 
 namespace notifier {
 // ----------------- Anime Job ---------------------------
-AnimeJob::AnimeJob(QNetworkAccessManager &manager, const QString &search, const QString &pushbulletToken,
-                   QObject *parent)
-    : QObject(parent), manager_(manager), search_(search), pushbulletToken_(pushbulletToken) {}
+AnimeJob::AnimeJob(QNetworkAccessManager &manager, const QString &username, const QString &search,
+                   const QString &pushbulletToken, QObject *parent)
+    : QObject(parent), manager_(manager), username_(username), search_(search), pushbulletToken_(pushbulletToken) {}
+
+QString AnimeJob::jobTag() const {
+    if (!animeTitle_.isEmpty()) {
+        return QString("[%1 | '%2']").arg(username_, animeTitle_);
+    }
+    return QString("[%1 | '%2']").arg(username_, search_);
+}
 
 void AnimeJob::start() {
     QUrl url(URL_STR);
     QUrlQuery q;
     q.addQueryItem("q", search_);
     url.setQuery(q);
-    qDebug() << "Encoded Url:" << url.toEncoded();
+    qDebug().noquote() << jobTag() << "Querying MAL search API:" << url.toString();
 
     QNetworkRequest request(url);
-
     request.setHeader(QNetworkRequest::UserAgentHeader, "WeeklyAnimeNotifier/1.0");
 
     searchReply_ = manager_.get(request);
-
     connect(searchReply_, &QNetworkReply::finished, this, &AnimeJob::onSearchFinished);
 }
 
 void AnimeJob::onSearchFinished() {
     if (searchReply_->error() != QNetworkReply::NoError) {
-        qCritical() << "Qt error:" << searchReply_->error();
-        qCritical() << "Error string:" << searchReply_->errorString();
-
+        qCritical().noquote() << jobTag() << "Search network error:" << searchReply_->errorString()
+                              << QString("(code: %1)").arg(searchReply_->error());
         finishJob();
         return;
     }
 
     bool parsedSearch = parseSearchReply();
-
     if (!parsedSearch) {
         emit finished();
         return;
@@ -46,13 +49,15 @@ bool AnimeJob::parseSearchReply() {
 
     auto arr = json["data"].toArray();
     if (arr.isEmpty()) {
-        qDebug() << "Empty 'data' in json";
+        qWarning().noquote() << jobTag() << "No matching anime found for search query.";
         return false;
     }
     auto first = arr.first().toObject();
 
     malId_ = first["mal_id"].toInt();
     animeTitle_ = first["title"].toString();
+
+    qInfo().noquote() << jobTag() << QString("Matched: '%1' (MAL ID: %2)").arg(animeTitle_).arg(malId_);
 
     searchReply_->deleteLater();
     searchReply_ = nullptr;
@@ -62,6 +67,7 @@ bool AnimeJob::parseSearchReply() {
 
 void AnimeJob::requestDetail() {
     QUrl url(URL_STR + "/" + QString::number(malId_));
+    qDebug().noquote() << jobTag() << "Requesting anime details from:" << url.toString();
     detailReply_ = manager_.get(QNetworkRequest(url));
 
     connect(detailReply_, &QNetworkReply::finished, this, &AnimeJob::onDetailFinished);
@@ -69,9 +75,8 @@ void AnimeJob::requestDetail() {
 
 void AnimeJob::onDetailFinished() {
     if (detailReply_->error() != QNetworkReply::NoError) {
-        qCritical() << "Qt error:" << detailReply_->error();
-        qCritical() << "Error string:" << detailReply_->errorString();
-
+        qCritical().noquote() << jobTag() << "Detail network error:" << detailReply_->errorString()
+                              << QString("(code: %1)").arg(detailReply_->error());
         finishJob();
         return;
     }
@@ -83,7 +88,7 @@ void AnimeJob::onDetailFinished() {
     }
 
     if (!airing_) {
-        qCritical() << "Anime not currently airing!";
+        qInfo().noquote() << jobTag() << "Anime is not currently airing. Skipping.";
         finishJob();
         return;
     }
@@ -96,31 +101,34 @@ void AnimeJob::onDetailFinished() {
 
     // Notification already sent today
     if (notificationAlreadySentToday()) {
-        qWarning() << "Notification already sent today, skip";
+        qInfo().noquote() << jobTag() << QString("Notification already sent today (%1). Skipping.")
+                                .arg(notificationTime_.date().toString("yyyy-MM-dd"));
         finishJob();
         return;
     }
 
     // check if new episode notification should be sent today
     if (!broadcastUtils::isToday(notificationTime_)) {
-        qDebug() << "Notification day is not today";
+        qInfo().noquote() << jobTag() << QString("Next episode date is %1 (not today). Skipping.")
+                                .arg(notificationTime_.date().toString("yyyy-MM-dd"));
         finishJob();
         return;
     }
 
-    qDebug() << "Notification time(local):" << notificationTime_.toString();
     // check if notification time has passed
     if (notificationTime_ > QDateTime::currentDateTime()) {
-        qDebug() << "The new episode is not ready to watch yet";
+        qInfo().noquote() << jobTag() << QString("Episode airs today but is not ready yet (ready at %1). Skipping.")
+                                .arg(notificationTime_.time().toString("HH:mm"));
         finishJob();
         return;
     }
 
     // notify that anime episode is up
+    qInfo().noquote() << jobTag() << "Episode is ready! Sending push notification...";
     bool requestedNotification = sendAnimeIsUpNotification();
 
     if (!requestedNotification) {
-        qDebug() << "Failed sending push notification api request";
+        qWarning().noquote() << jobTag() << "Failed to dispatch push notification request.";
         finishJob();
         return;
     }
@@ -137,31 +145,26 @@ bool AnimeJob::parseDetailReply() {
 
     auto json = QJsonDocument::fromJson(detailReply_->readAll(), &err);
     if (err.error != QJsonParseError::NoError) {
-        qDebug() << "Json parsing error";
+        qWarning().noquote() << jobTag() << "JSON parsing error on anime detail reply:" << err.errorString();
         return false;
     }
 
     auto animeDataObj = json.object().value("data").toObject();
     if (animeDataObj.isEmpty()) {
-        qDebug() << "Empty anime data object";
+        qWarning().noquote() << jobTag() << "Anime detail response has empty 'data' field.";
         return false;
     }
 
     airing_ = animeDataObj["airing"].toBool();
-    qDebug() << "Airing:" << airing_;
 
     auto broadcastObj = animeDataObj["broadcast"].toObject();
     jpnBroadcastInfo_ = broadcastObj["string"].toString();
     jpnDay_ = broadcastObj["day"].toString();
     jpnTime_ = broadcastObj["time"].toString();
     jpnTimezone_ = broadcastObj["timezone"].toString();
-    qDebug() << "Broadcast: " << jpnBroadcastInfo_;
-    qDebug() << "Day: " << jpnDay_;
-    qDebug() << "Time: " << jpnTime_;
-    qDebug() << "Timezone: " << jpnTimezone_;
 
     if (jpnDay_.isEmpty() || jpnTime_.isEmpty() || jpnTimezone_.isEmpty()) {
-        qDebug() << "Anime is missing broadcasting data";
+        qWarning().noquote() << jobTag() << "Anime is missing broadcast schedule info (day/time/timezone).";
         return false;
     }
 
@@ -179,10 +182,13 @@ void AnimeJob::calculateLocalNotificationTime() {
     QDateTime jpBroadcast(nextBroadcastJp, QTime(splitTime[0].toInt(), splitTime[1].toInt()), tokyoTz);
     QDateTime localBroadcast = jpBroadcast.toLocalTime();
 
-    qDebug() << "Local time:" << localBroadcast.toString();
-
     // make notification time from airing time + buffer for the episode to be translated
     notificationTime_ = localBroadcast.addSecs(10800); // +3 hours
+
+    qDebug().noquote() << jobTag() << QString("Broadcast: %1 (%2 at %3 %4) -> Local air: %5 -> Scheduled notification (+3h buffer): %6")
+                                  .arg(jpnBroadcastInfo_, jpnDay_, jpnTime_, jpnTimezone_,
+                                       localBroadcast.toString("yyyy-MM-dd HH:mm"),
+                                       notificationTime_.toString("yyyy-MM-dd HH:mm"));
 }
 
 void AnimeJob::changeTestingModeNotifTime() {
@@ -191,8 +197,9 @@ void AnimeJob::changeTestingModeNotifTime() {
 
     notificationTime_.setDate(QDate::currentDate());
     notificationTime_.setTime(QTime::currentTime());
-    qDebug() << "Changed notification time to" << notificationTime_.toString()
-             << "for testing purposes, remember to DELETE!!!";
+    qWarning().noquote() << jobTag()
+                         << QString("TESTING MODE ACTIVE: Overrode notification time to now (%1)")
+                                .arg(notificationTime_.toString("yyyy-MM-dd HH:mm:ss"));
 }
 
 bool AnimeJob::sendAnimeIsUpNotification() {
@@ -204,17 +211,17 @@ bool AnimeJob::sendAnimeIsUpNotification() {
     QNetworkReply *pushbulletReply = broadcastUtils::sendPushNotification(pushbulletToken_, manager_, notification);
 
     if (nullptr == pushbulletReply) {
-        qDebug() << "Failed sending push notification";
+        qWarning().noquote() << jobTag() << "Failed to initialize Pushbullet request (empty token or invalid request).";
         return false;
     }
 
-    qDebug() << "Requested push notification";
+    qDebug().noquote() << jobTag() << "Dispatched Pushbullet notification request.";
 
     QObject::connect(pushbulletReply, &QNetworkReply::finished, [this, pushbulletReply]() {
         if (pushbulletReply->error() == QNetworkReply::NoError) {
-            qDebug() << "Successfully pushed notification";
+            qInfo().noquote() << jobTag() << "Pushbullet notification delivered successfully.";
         } else {
-            qWarning() << "Pushbullet error:" << pushbulletReply->errorString();
+            qWarning().noquote() << jobTag() << "Pushbullet notification failed:" << pushbulletReply->errorString();
         }
 
         pushbulletReply->deleteLater();
@@ -257,30 +264,32 @@ void AnimeNotifier::start() {
 
     fillUserSearches();
 
+    qInfo().noquote() << QString("Loaded configuration: %1 user(s), %2 total anime search(es).")
+                             .arg(users_.size())
+                             .arg(userSearches_.size());
+
     runNextJob();
 }
 
 void AnimeNotifier::runNextJob() {
-    qDebug() << "runNextJob index:" << index_;
-
     if (index_ >= userSearches_.size()) {
-        qDebug() << "Done with anime search list";
+        qInfo().noquote() << QString("All %1 anime search job(s) completed.").arg(userSearches_.size());
         QCoreApplication::quit();
         return;
     }
 
     UserSearchTask userSearch = userSearches_[index_++];
 
-    // QString search = animeList_[index_++];
+    qInfo().noquote() << QString("[%1/%2] Starting check for user '%3' (search: '%4')")
+                             .arg(index_)
+                             .arg(userSearches_.size())
+                             .arg(userSearch.username_, userSearch.animeSearch_);
 
-    qDebug() << "Creating job with username '" << userSearch.username_ << "', search '" << userSearch.animeSearch_
-             << "'";
-
-    auto *job = new AnimeJob(manager_, userSearch.animeSearch_, userSearch.pushbulletToken_, this);
+    auto *job = new AnimeJob(manager_, userSearch.username_, userSearch.animeSearch_, userSearch.pushbulletToken_, this);
 
     connect(job, &AnimeJob::finished, this, [this, userSearch]() {
-        qDebug() << "Finished job with username '" << userSearch.username_ << "', search '" << userSearch.animeSearch_
-                 << "'";
+        qDebug().noquote() << QString("[%1 | '%2'] Job completed.")
+                                  .arg(userSearch.username_, userSearch.animeSearch_);
         QTimer::singleShot(1000, this, &AnimeNotifier::runNextJob);
     });
 
@@ -289,7 +298,7 @@ void AnimeNotifier::runNextJob() {
 
 void AnimeNotifier::fillUserSearches() {
     if (users_.empty()) {
-        qDebug() << "Empty user list";
+        qWarning().noquote() << "User list is empty! Check config.json.";
         return;
     }
 

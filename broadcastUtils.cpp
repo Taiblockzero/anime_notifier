@@ -32,7 +32,7 @@ bool isToday(const QDateTime &datetime) { return datetime.date() == QDate::curre
 QNetworkReply *sendPushNotification(const QString &pushbulletToken, QNetworkAccessManager &manager,
                                     const PushNotification &notification) {
     if (pushbulletToken.isEmpty()) {
-        qWarning() << "Missing pushbullet token!";
+        qWarning().noquote() << "Missing Pushbullet access token!";
         return nullptr;
     }
 

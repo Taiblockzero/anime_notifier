@@ -21,8 +21,8 @@ class AnimeJob : public QObject {
     Q_OBJECT
 
   public:
-    AnimeJob(QNetworkAccessManager &manager, const QString &search, const QString &pushbulletToken,
-             QObject *parent = nullptr);
+    AnimeJob(QNetworkAccessManager &manager, const QString &username, const QString &search,
+             const QString &pushbulletToken, QObject *parent = nullptr);
 
     void start();
 
@@ -34,6 +34,7 @@ class AnimeJob : public QObject {
     void onDetailFinished();
 
   private:
+    QString jobTag() const;
     bool parseSearchReply();
     void requestDetail();
     bool parseDetailReply();
@@ -48,6 +49,7 @@ class AnimeJob : public QObject {
   private:
     QNetworkAccessManager &manager_;
     cfg::persistentNotificationHistory hist_;
+    QString username_;
     QString search_;
 
     int malId_ = 0;
