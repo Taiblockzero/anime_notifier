@@ -3,5 +3,6 @@
 namespace logging {
 
 void installLogging();
+void printSeparator();
 
 }

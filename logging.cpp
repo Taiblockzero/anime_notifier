@@ -65,4 +65,9 @@ void installLogging() {
     qInstallMessageHandler(messageHandler);
 }
 
+void printSeparator() {
+    fprintf(stdout, "--------------------------------------------------------------------------------\n");
+    fflush(stdout);
+}
+
 } // namespace logging
