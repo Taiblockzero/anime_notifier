@@ -1,8 +1,28 @@
 {
-  "pushbullet_token": "YOUR_PUSHBULLET_TOKEN",
-  "anime_searches": [
-    "super no ura",
-    "marriagetoxin",
-    "yomi no tsugai"
+  "users": [
+    {
+      "username": "Pesho",
+      "pushbullet_token": "YOUR_PUSHBULLET_TOKEN",
+      "anime_searches": [
+        "super no ura",
+        "yomi no tsugai"
+      ]
+    },
+    {
+      "username": "Gosho",
+      "pushbullet_token": "YOUR_PUSHBULLET_TOKEN_2",
+      "anime_searches": [
+        "mushoku tensei season 3",
+        "youjo senki 2",
+	"Re:Zero kara Hajimeru Isekai Seikatsu 4th Season"
+      ]
+    },
+    {
+      "username": "Tosho",
+      "pushbullet_token": "YOUR_PUSHBULLET_TOKEN_3",
+      "anime_searches": [
+        "grand blue season 3"
+      ]
+    }
   ]
 }
