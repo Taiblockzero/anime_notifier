@@ -43,3 +43,60 @@ Create a `config.json` file in your execution directory using the following stru
     }
   ]
 }
+```
+
+---
+
+## Build Instructions
+
+### Prerequisites
+* GCC/G++ supporting C++17 or higher
+* Qt 6 Development libraries (`qt6-base-dev`)
+
+### Compiling on Linux / Raspberry Pi
+
+1. **Install dependencies:**
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential qt6-base-dev qt6-base-dev-tools
+   ```
+
+2. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/your-username/anime_notifier.git](https://github.com/your-username/anime_notifier.git)
+   cd anime_notifier
+   ```
+
+3. **Build using `qmake6`:**
+   ```bash
+   make clean
+   qmake6
+   make -j$(nproc)
+   ```
+
+4. **Run the executable:**
+   ```bash
+   ./WeeklyAnimeNotifier
+   ```
+
+---
+
+## Automation (Cron Job Setup)
+
+To run the notifier automatically every 15 minutes on your Raspberry Pi:
+
+1. Open your user crontab:
+   ```bash
+   crontab -e
+   ```
+
+2. Add the following entry (adjust paths to match your installation):
+   ```bash
+   */15 * * * * cd /home/pi/anime_notifier && ./WeeklyAnimeNotifier >> /home/pi/anime_notifier/notifier.log 2>&1
+   ```
+
+---
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
