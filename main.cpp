@@ -10,7 +10,8 @@ int main(int argc, char *argv[]) {
     qInfo().noquote() << "Starting Anime Notifier run";
 
     notifier::AnimeNotifier malNotifier;
-    malNotifier.start();
+    // Use singleShot to avoid endless running bug when config is invalid (put this task in Qt event queue)
+    QTimer::singleShot(0, &malNotifier, &notifier::AnimeNotifier::start);
 
     int exitCode = QCoreApplication::exec();
 

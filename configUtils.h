@@ -30,7 +30,16 @@ class Config {
         }
 
         // parse config JSON
-        QJsonObject rootObj = QJsonDocument::fromJson(file.readAll()).object();
+        QJsonParseError parseErr;
+        QJsonObject rootObj = QJsonDocument::fromJson(file.readAll(), &parseErr).object();
+        file.close();
+
+        // check config json for correctness
+        if (parseErr.error != QJsonParseError::NoError) {
+            qCritical() << "Config JSON parse error at offset" << parseErr.offset << ":" << parseErr.errorString();
+            return c;
+        }
+
         QJsonArray usersArr = rootObj.value("users").toArray();
         for (const auto &userVal : std::as_const(usersArr)) {
             ConfigUser tempUser;
