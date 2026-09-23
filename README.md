@@ -1,4 +1,4 @@
-# Weekly Anime Notifier 🎌
+# Weekly Anime Notifier
 
 A C++ program built with Qt 6 that tracks anime episode releases across multiple users and dispatches push notifications via Pushbullet whenever they're ready to watch.
 
