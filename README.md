@@ -99,4 +99,4 @@ To run the notifier automatically every 15 minutes on your Raspberry Pi:
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.
