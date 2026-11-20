@@ -1,5 +1,12 @@
 # TODO Checklist
-- create release version 1.0.0
+- Split functionality after parsing the anime details more
+- Change sending of notifications from pushbullet to google FCM
 
-- improve running in test mode changing notification time to now, use some setting in config or something
-- separate finding an episode from who needs to be notified OR cache found anime info
+
+- Add FCM table to db
+- Server reads FCM from db
+- App writes FCM to db
+
+
+
+- is there a way to not repeat anime searches in database?

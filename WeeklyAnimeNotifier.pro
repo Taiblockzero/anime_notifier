@@ -13,7 +13,8 @@ SOURCES += \
         configUtils.cpp \
         logging.cpp \
         main.cpp \
-        persistentNotificationHistory.cpp
+        persistentNotificationHistory.cpp \
+        searchChecker.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -25,4 +26,6 @@ HEADERS += \
     broadcastUtils.h \
     configUtils.h \
     logging.h \
-    persistentNotificationHistory.h
+    persistentNotificationHistory.h \
+    searchChecker.h \
+    searchRecord.h
