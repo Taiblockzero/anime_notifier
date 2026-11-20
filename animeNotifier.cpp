@@ -256,59 +256,62 @@ bool AnimeJob::notificationAlreadySentToday() {
 }
 
 // ----------------- Anime Notifier ----------------------
+AnimeNotifier::AnimeNotifier(const QString &supabaseUrl, const QString &supabaseKey)
+    : supabaseUrl_(supabaseUrl), supabaseKey_(supabaseKey) {}
+
 void AnimeNotifier::start() {
-    conf_ = cfg::Config::load("config.json");
-
-    users_ = conf_.users;
     index_ = 0;
+    checkerPtr_ = new db::SearchChecker(supabaseUrl_, supabaseKey_, this);
+    connect(checkerPtr_, &db::SearchChecker::searchesRetrieved, this, &AnimeNotifier::onSearchesRetrieved);
 
-    fillUserSearches();
-
-    qInfo().noquote() << QString("Loaded configuration: %1 user(s), %2 total anime search(es).")
-                             .arg(users_.size())
-                             .arg(userSearches_.size());
-
-    runNextJob();
-}
-
-void AnimeNotifier::runNextJob() {
-    if (index_ >= userSearches_.size()) {
-        qInfo().noquote() << QString("All %1 anime search job(s) completed.").arg(userSearches_.size());
-        QCoreApplication::quit();
-        return;
-    }
-
-    UserSearchTask userSearch = userSearches_[index_++];
-
-    qInfo().noquote() << QString("[%1/%2] Starting check for user '%3' (search: '%4')")
-                             .arg(index_)
-                             .arg(userSearches_.size())
-                             .arg(userSearch.username_, userSearch.animeSearch_);
-
-    auto *job = new AnimeJob(manager_, userSearch.username_, userSearch.animeSearch_, userSearch.pushbulletToken_, this);
-
-    connect(job, &AnimeJob::finished, this, [this, userSearch]() {
-        qDebug().noquote() << QString("[%1 | '%2'] Job completed.")
-                                  .arg(userSearch.username_, userSearch.animeSearch_);
-        QTimer::singleShot(1000, this, &AnimeNotifier::runNextJob);
+    connect(checkerPtr_, &db::SearchChecker::finished, this, [this](int exitCode) {
+        if (exitCode != 0) {
+            qCritical() << "db::SearchChecker failed with exit code" << exitCode;
+            emit finished(exitCode);
+        }
     });
 
-    job->start();
+    qInfo() << "Starting AnimeNotifier. Triggering db::SearchChecker...";
+    checkerPtr_->run();
 }
 
-void AnimeNotifier::fillUserSearches() {
-    if (users_.empty()) {
-        qWarning().noquote() << "User list is empty! Check config.json.";
+void AnimeNotifier::onSearchesRetrieved(const QJsonArray &supabaseSearches) {
+    if (supabaseSearches.empty()) {
+        qWarning() << "No searches found in Supabase!";
+        emit finished(1);
         return;
     }
 
-    for (const auto &user : users_) {
-        for (const auto &search : user.animeSearches_) {
-            UserSearchTask tempSearchTask{
-                .username_ = user.username_, .pushbulletToken_ = user.pushbulletToken_, .animeSearch_ = search};
-            userSearches_.push_back(tempSearchTask);
+    qInfo() << "Retrieved" << supabaseSearches.size() << "searches from Supabase";
+
+    searchesQueue_.clear();
+    for (const QJsonValue &searchVal : supabaseSearches) {
+        if (searchVal.isObject()) {
+            searchesQueue_.append(searchVal.toObject());
         }
     }
+
+    processNextSearch();
+}
+
+void AnimeNotifier::processNextSearch() {
+    if (searchesQueue_.empty()) {
+        qInfo() << "Finished processing searches";
+        emit finished(0);
+        return;
+    }
+
+    QJsonObject currentSearch = searchesQueue_.takeFirst();
+    db::SearchRecord currentRecord = db::fromJson(currentSearch);
+
+    qInfo() << "Processing Search ID:" << currentRecord.searchId << "| Term:" << currentRecord.search
+            << "| Last Notified:"
+            << (currentRecord.lastNotifiedAt.isNull() ? "Never" : currentRecord.lastNotifiedAt.toString());
+
+    // run Anime Job
+
+    // TODO: Perform scrape/match check here.
+    // Call processNextSearch() when this item finishes.
 }
 
 } // namespace notifier

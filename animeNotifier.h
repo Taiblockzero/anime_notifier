@@ -14,6 +14,8 @@
 #include "broadcastUtils.h"
 #include "configUtils.h"
 #include "persistentNotificationHistory.h"
+#include "searchChecker.h"
+#include "searchRecord.h"
 
 namespace notifier {
 
@@ -70,27 +72,29 @@ class AnimeJob : public QObject {
     bool testingMode_ = false;
 };
 
-struct UserSearchTask {
-    QString username_;
-    QString pushbulletToken_;
-    QString animeSearch_;
-};
-
 class AnimeNotifier : public QObject {
     Q_OBJECT
 
   public:
+    AnimeNotifier(const QString &supabaseUrl, const QString &supabaseKey);
     void start();
 
   private slots:
     void runNextJob();
+    void onSearchesRetrieved(const QJsonArray &supabaseSearches);
+    void processNextSearch();
+
+  signals:
+    void finished(int exitCode);
 
   private:
     QNetworkAccessManager manager_;
-    std::vector<cfg::ConfigUser> users_;
     std::vector<UserSearchTask> userSearches_;
     std::size_t index_ = 0;
-    cfg::Config conf_;
+    const QString supabaseUrl_;
+    const QString supabaseKey_;
+    db::SearchChecker *checkerPtr_ = nullptr;
+    QList<QJsonObject> searchesQueue_;
 
   private:
     /* Flattens config users to get from '1 user with many searches' -> '1 user with 1 search'.
