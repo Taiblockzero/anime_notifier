@@ -46,7 +46,9 @@ class AnimeJob : public QObject {
     bool sendAnimeIsUpNotification();
     void finishJob();
     /* Check if notification has been sent today already */
-    bool notificationAlreadySentToday();
+    bool notificationAlreadySentToday() const;
+    /* Check if all conditions for sending a notification have been met */
+    bool sendNotificationConditionsMet() const;
 
   private:
     QNetworkAccessManager &manager_;
@@ -89,7 +91,6 @@ class AnimeNotifier : public QObject {
 
   private:
     QNetworkAccessManager manager_;
-    std::vector<UserSearchTask> userSearches_;
     std::size_t index_ = 0;
     const QString supabaseUrl_;
     const QString supabaseKey_;

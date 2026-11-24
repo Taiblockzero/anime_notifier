@@ -74,6 +74,7 @@ void AnimeJob::requestDetail() {
 }
 
 void AnimeJob::onDetailFinished() {
+    // Process API reply
     if (detailReply_->error() != QNetworkReply::NoError) {
         qCritical().noquote() << jobTag() << "Detail network error:" << detailReply_->errorString()
                               << QString("(code: %1)").arg(detailReply_->error());
@@ -87,43 +88,19 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    if (!airing_) {
-        qInfo().noquote() << jobTag() << "Anime is not currently airing. Skipping.";
-        finishJob();
-        return;
-    }
-
+    // Prerequisites for checking conditions
     calculateLocalNotificationTime();
-
-    // activate testing mode to change notification time to now
+    // activate testing mode if needed to change notification time to now
     testingMode_ = false;
     changeTestingModeNotifTime();
 
-    // Notification already sent today
-    if (notificationAlreadySentToday()) {
-        qInfo().noquote() << jobTag() << QString("Notification already sent today (%1). Skipping.")
-                                .arg(notificationTime_.date().toString("yyyy-MM-dd"));
+    // Check conditions for sending notification
+    if (!sendNotificationConditionsMet()) {
         finishJob();
         return;
     }
 
-    // check if new episode notification should be sent today
-    if (!broadcastUtils::isToday(notificationTime_)) {
-        qInfo().noquote() << jobTag() << QString("Next episode date is %1 (not today). Skipping.")
-                                .arg(notificationTime_.date().toString("yyyy-MM-dd"));
-        finishJob();
-        return;
-    }
-
-    // check if notification time has passed
-    if (notificationTime_ > QDateTime::currentDateTime()) {
-        qInfo().noquote() << jobTag() << QString("Episode airs today but is not ready yet (ready at %1). Skipping.")
-                                .arg(notificationTime_.time().toString("HH:mm"));
-        finishJob();
-        return;
-    }
-
-    // notify that anime episode is up
+    // Send notification that anime episode is up
     qInfo().noquote() << jobTag() << "Episode is ready! Sending push notification...";
     bool requestedNotification = sendAnimeIsUpNotification();
 
@@ -133,7 +110,7 @@ void AnimeJob::onDetailFinished() {
         return;
     }
 
-    // update latest notification sent date in persistent settings
+    // Update latest notification sent date in persistent settings
     hist_.setLatestDate(malId_, notificationTime_.date());
 
     detailReply_->deleteLater();
@@ -245,7 +222,7 @@ void AnimeJob::finishJob() {
     emit finished();
 }
 
-bool AnimeJob::notificationAlreadySentToday() {
+bool AnimeJob::notificationAlreadySentToday() const {
     // Don't skip sending notifications when in testing mode
     if (testingMode_)
         return false;
@@ -253,6 +230,40 @@ bool AnimeJob::notificationAlreadySentToday() {
     if (hist_.getLatestDate(malId_) == notificationTime_.date())
         return true;
     return false;
+}
+
+bool AnimeJob::sendNotificationConditionsMet() const {
+    // is anime currently airing
+    if (!airing_) {
+        qInfo().noquote() << jobTag() << "Anime is not currently airing. Skipping.";
+        return false;
+    }
+
+    // is notification already sent today
+    if (notificationAlreadySentToday()) {
+        qInfo().noquote() << jobTag()
+                          << QString("Notification already sent today (%1). Skipping.")
+                                 .arg(notificationTime_.date().toString("yyyy-MM-dd"));
+        return false;
+    }
+
+    // should new episode notification be sent today
+    if (!broadcastUtils::isToday(notificationTime_)) {
+        qInfo().noquote() << jobTag()
+                          << QString("Next episode date is %1 (not today). Skipping.")
+                                 .arg(notificationTime_.date().toString("yyyy-MM-dd"));
+        return false;
+    }
+
+    // has notification time passed
+    if (notificationTime_ > QDateTime::currentDateTime()) {
+        qInfo().noquote() << jobTag()
+                          << QString("Episode airs today but is not ready yet (ready at %1). Skipping.")
+                                 .arg(notificationTime_.time().toString("HH:mm"));
+        return false;
+    }
+
+    return true;
 }
 
 // ----------------- Anime Notifier ----------------------
