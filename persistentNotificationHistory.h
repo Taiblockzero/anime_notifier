@@ -14,7 +14,7 @@ class persistentNotificationHistory {
 
     // Get on which date a notification was last sent for a specific anime
     // Returns -1 if no notifications were yet sent
-    QDate getLatestDate(int malId);
+    QDate getLatestDate(int malId) const;
 
   private:
     QSettings settings_;

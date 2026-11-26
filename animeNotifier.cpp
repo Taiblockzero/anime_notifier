@@ -2,9 +2,10 @@
 
 namespace notifier {
 // ----------------- Anime Job ---------------------------
-AnimeJob::AnimeJob(QNetworkAccessManager &manager, const QString &username, const QString &search,
-                   const QString &pushbulletToken, QObject *parent)
-    : QObject(parent), manager_(manager), username_(username), search_(search), pushbulletToken_(pushbulletToken) {}
+AnimeJob::AnimeJob(QNetworkAccessManager &manager, const db::SearchRecord &searchRec, const QString supabaseUrl,
+                   const QString supabaseServiceKey, QObject *parent)
+    : QObject(parent), manager_(manager), searchRec_(searchRec), supabaseUrl_(supabaseUrl),
+      supabaseServiceKey_(supabaseServiceKey) {}
 
 QString AnimeJob::jobTag() const {
     if (!animeTitle_.isEmpty()) {
@@ -102,7 +103,7 @@ void AnimeJob::onDetailFinished() {
 
     // Send notification that anime episode is up
     qInfo().noquote() << jobTag() << "Episode is ready! Sending push notification...";
-    bool requestedNotification = sendAnimeIsUpNotification();
+    bool requestedNotification = communicateNotificationIsReady();
 
     if (!requestedNotification) {
         qWarning().noquote() << jobTag() << "Failed to dispatch push notification request.";
@@ -115,6 +116,30 @@ void AnimeJob::onDetailFinished() {
 
     detailReply_->deleteLater();
     detailReply_ = nullptr;
+}
+
+void AnimeJob::onDbNotificationFinished() {
+    notifyReply_->deleteLater();
+    QNetworkReply *reply = notifyReply_;
+    notifyReply_ = nullptr;
+
+    if (reply->error() != QNetworkReply::NoError) {
+        qCritical().noquote() << jobTag() << "Failed to queue notification in Supabase:" << reply->errorString()
+                              << reply->readAll();
+        finishJob();
+        return;
+    }
+
+    // PostgREST returns true or false
+    const QByteArray response = reply->readAll().trimmed();
+    if (response == "true") {
+        qInfo().noquote() << jobTag() << "Notification queued and last_notified_at updated.";
+    } else {
+        qInfo().noquote() << jobTag()
+                          << "Skipped DB insert (already notified today or search record no longer exists).";
+    }
+
+    finishJob();
 }
 
 bool AnimeJob::parseDetailReply() {
@@ -179,7 +204,7 @@ void AnimeJob::changeTestingModeNotifTime() {
                                 .arg(notificationTime_.toString("yyyy-MM-dd HH:mm:ss"));
 }
 
-bool AnimeJob::sendAnimeIsUpNotification() {
+bool AnimeJob::communicateNotificationIsReady() {
     broadcastUtils::PushNotification notification{.type = broadcastUtils::PushTypes::note,
                                                   .title = "'" + animeTitle_ + "' new episode released",
                                                   .body = "'" + animeTitle_ +
@@ -264,6 +289,23 @@ bool AnimeJob::sendNotificationConditionsMet() const {
     }
 
     return true;
+}
+
+void AnimeJob::queueDatabaseNotification() {
+    const QUrl url(QString("%1/rest/v1/rpc/queue_anime_notification").arg(supabaseUrl_));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("apikey", supabaseServiceKey_.toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(supabaseServiceKey_).toUtf8());
+
+    QJsonObject payload;
+    payload["p_search_id"] = searchRec_.searchId;
+    payload["p_user_id"] = searchRec_.userId.toString(QUuid::WithoutBraces);
+    payload["p_title"] = QString("%1 — New Episode Ready").arg(animeTitle_);
+    payload["p_body"] = QString("Episode aired at %1").arg(notificationTime_.toString("HH:mm"));
+
+    notifyReply_ = manager_.post(request, QJsonDocument(payload).toJson(QJsonDocument::Compact));
+    connect(notifyReply_, &QNetworkReply::finished, this, &AnimeJob::onDbNotificationFinished);
 }
 
 // ----------------- Anime Notifier ----------------------

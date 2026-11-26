@@ -6,7 +6,7 @@ void persistentNotificationHistory::setLatestDate(int malId, QDate date) {
     settings_.setValue(SETTING_PREFIX + QString::number(malId), date);
 }
 
-QDate persistentNotificationHistory::getLatestDate(int malId) {
+QDate persistentNotificationHistory::getLatestDate(int malId) const {
     QVariant value = settings_.value(SETTING_PREFIX + QString::number(malId));
     if (!value.isValid())
         return QDate();

@@ -23,8 +23,8 @@ class AnimeJob : public QObject {
     Q_OBJECT
 
   public:
-    AnimeJob(QNetworkAccessManager &manager, const QString &username, const QString &search,
-             const QString &pushbulletToken, QObject *parent = nullptr);
+    AnimeJob(QNetworkAccessManager &manager, const db::SearchRecord &searchRec, const QString supabaseUrl,
+             const QString supabaseServiceKey, QObject *parent = nullptr);
 
     void start();
 
@@ -34,6 +34,7 @@ class AnimeJob : public QObject {
   private slots:
     void onSearchFinished();
     void onDetailFinished();
+    void onDbNotificationFinished();
 
   private:
     QString jobTag() const;
@@ -43,12 +44,13 @@ class AnimeJob : public QObject {
     void calculateLocalNotificationTime();
     /* Change notification sending time to Now if testing mode is on */
     void changeTestingModeNotifTime();
-    bool sendAnimeIsUpNotification();
+    bool communicateNotificationIsReady();
     void finishJob();
     /* Check if notification has been sent today already */
     bool notificationAlreadySentToday() const;
     /* Check if all conditions for sending a notification have been met */
     bool sendNotificationConditionsMet() const;
+    void queueDatabaseNotification();
 
   private:
     QNetworkAccessManager &manager_;
@@ -65,9 +67,13 @@ class AnimeJob : public QObject {
     QString jpnTime_;
     QString jpnTimezone_;
     QDateTime notificationTime_;
+    db::SearchRecord searchRec_;
+    QString supabaseUrl_;
+    QString supabaseServiceKey_;
 
     QNetworkReply *searchReply_ = nullptr;
     QNetworkReply *detailReply_ = nullptr;
+    QNetworkReply *notifyReply_ = nullptr;
 
     const QString URL_STR = "https://api.tenrai.org/v1/anime";
 
